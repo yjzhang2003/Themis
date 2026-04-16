@@ -59,13 +59,13 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     const hooks = library.listHooks();
 
     return (
-      <Box flexDirection="column" flexGrow={1}>
+      <Box key="main" flexDirection="column" flexGrow={1}>
         <Box borderStyle="bold" padding={1} marginBottom={1}>
           <Text bold>TASK HARNESS</Text>
         </Box>
 
         <ListBox
-          key={refreshKey}
+          key={`main-${refreshKey}`}
           items={[
             {
               id: 'tasks',
@@ -102,14 +102,14 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     const tasks = store.listTasks();
 
     return (
-      <Box flexDirection="column" flexGrow={1}>
+      <Box key="tasks" flexDirection="column" flexGrow={1}>
         <Box borderStyle="bold" padding={1} marginBottom={1}>
           <Text bold>TASKS</Text>
           <Text dimColor> - {tasks.length} task{tasks.length !== 1 ? 's' : ''}</Text>
         </Box>
 
         <ListBox
-          key={refreshKey}
+          key={`tasks-${refreshKey}`}
           items={[
             {
               id: 'new',
@@ -160,7 +160,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     }
 
     return (
-      <Box flexDirection="column" flexGrow={1}>
+      <Box key="task-detail" flexDirection="column" flexGrow={1}>
         <Box borderStyle="bold" padding={1} marginBottom={1}>
           <Text bold>{task.id.toUpperCase()}: </Text>
           <Text>{task.name}</Text>
@@ -178,7 +178,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
         </Box>
 
         <ListBox
-          key={refreshKey}
+          key={`task-detail-${refreshKey}`}
           items={[
             {
               id: 'activate',
@@ -249,14 +249,14 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     const totalSkills = categories.reduce((sum, c) => sum + c.count, 0);
 
     return (
-      <Box flexDirection="column" flexGrow={1}>
+      <Box key="skills" flexDirection="column" flexGrow={1}>
         <Box borderStyle="bold" padding={1} marginBottom={1}>
           <Text bold>SKILLS</Text>
           <Text dimColor> - {categories.length} categories, {totalSkills} skills</Text>
         </Box>
 
         <ListBox
-          key={refreshKey}
+          key={`skills-${refreshKey}`}
           items={[
             {
               id: 'new',
@@ -296,7 +296,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     });
 
     return (
-      <Box flexDirection="column" flexGrow={1}>
+      <Box key="skill-list" flexDirection="column" flexGrow={1}>
         <Box borderStyle="bold" padding={1} marginBottom={1}>
           <Text bold>SKILLS</Text>
           <Text dimColor> - {skillCategory}</Text>
@@ -304,7 +304,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
         </Box>
 
         <ListBox
-          key={refreshKey}
+          key={`skill-list-${refreshKey}`}
           items={[
             ...result.skills.map((s) => ({
               id: s.id,
@@ -353,14 +353,14 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     const linkedSkillIds = task?.skills.map((s) => s.skill) || [];
 
     return (
-      <Box flexDirection="column" flexGrow={1}>
+      <Box key="skill-select" flexDirection="column" flexGrow={1}>
         <Box borderStyle="bold" padding={1} marginBottom={1}>
           <Text bold>ADD SKILL TO TASK</Text>
         </Box>
         <Text dimColor paddingX={1}>Select a skill to link:</Text>
 
         <ListBox
-          key={refreshKey}
+          key={`skill-select-${refreshKey}`}
           items={skills
             .filter((s) => !linkedSkillIds.includes(s.id))
             .map((s) => ({
@@ -393,14 +393,14 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     const hooks = library.listHooks();
 
     return (
-      <Box flexDirection="column" flexGrow={1}>
+      <Box key="hooks" flexDirection="column" flexGrow={1}>
         <Box borderStyle="bold" padding={1} marginBottom={1}>
           <Text bold>HOOKS</Text>
           <Text dimColor> - {hooks.length} hook{hooks.length !== 1 ? 's' : ''}</Text>
         </Box>
 
         <ListBox
-          key={refreshKey}
+          key={`hooks-${refreshKey}`}
           items={[
             {
               id: 'new',
@@ -449,14 +449,14 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     const linkedHookIds = Object.values(task?.hooks || {}).flat();
 
     return (
-      <Box flexDirection="column" flexGrow={1}>
+      <Box key="hook-select" flexDirection="column" flexGrow={1}>
         <Box borderStyle="bold" padding={1} marginBottom={1}>
           <Text bold>ADD HOOK TO TASK</Text>
         </Box>
         <Text dimColor paddingX={1}>Select a hook to link:</Text>
 
         <ListBox
-          key={refreshKey}
+          key={`hook-select-${refreshKey}`}
           items={hooks
             .filter((h) => !linkedHookIds.includes(h.id))
             .map((h) => ({
