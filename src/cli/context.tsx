@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useMemo, ReactNode } from 'react';
 import { existsSync } from 'fs';
 import { TaskStore } from '../task/store.js';
 import { LibraryStore } from '../library/store.js';
@@ -32,40 +32,24 @@ interface CLIProviderProps {
 }
 
 export function CLIProvider({ children }: CLIProviderProps) {
-  const [store, setStore] = useState<TaskStore | null>(null);
-  const [library, setLibrary] = useState<LibraryStore | null>(null);
-  const [workspaceRoot] = useState(() => process.env.ORIGINAL_PWD || process.cwd());
-  const [args, setArgs] = useState<Record<string, unknown>>({});
-  const [command, setCommand] = useState('');
-  const [subcommand, setSubcommand] = useState('');
-  const [help, setHelp] = useState(false);
+  // Parse args synchronously
+  const parsedArgs = useMemo(() => parseArgs(), []);
+  const cmd = (parsedArgs._[0] as string) || '';
+  const sub = (parsedArgs._[1] as string) || '';
 
-  useEffect(() => {
-    // Parse command line arguments
-    const cliArgs = parseArgs();
-    setArgs(cliArgs);
-
-    const cmd = (cliArgs._[0] as string) || '';
-    const sub = (cliArgs._[1] as string) || '';
-    setCommand(cmd);
-    setSubcommand(sub);
-    setHelp(cliArgs.h || cliArgs.help || false);
-
-    // Find workspace root by looking for harness.yaml
-    // Start from the directory where th was invoked
+  // Find workspace root synchronously
+  const workspaceRoot = useMemo(() => {
     let root = process.env.ORIGINAL_PWD || process.cwd();
     let current = root;
     let found = false;
     const maxIter = 20;
     let iter = 0;
 
-    // First check if current dir has harness.yaml
     if (existsSync(`${current}/harness.yaml`)) {
       root = current;
       found = true;
     }
 
-    // If not found, walk up parent directories
     while (iter < maxIter && !found) {
       const configPath = `${current}/harness.yaml`;
       try {
@@ -82,23 +66,27 @@ export function CLIProvider({ children }: CLIProviderProps) {
       }
       iter++;
     }
-
-    if (found) {
-      const taskStore = new TaskStore(root);
-      taskStore.ensureDirectories();
-      setStore(taskStore);
-
-      const libStore = new LibraryStore(root);
-      libStore.ensureDirectories();
-      setLibrary(libStore);
-    }
+    return root;
   }, []);
 
-  const showHelp = () => help;
+  // Initialize stores synchronously
+  const store = useMemo(() => {
+    const taskStore = new TaskStore(workspaceRoot);
+    taskStore.ensureDirectories();
+    return taskStore;
+  }, [workspaceRoot]);
+
+  const library = useMemo(() => {
+    const libStore = new LibraryStore(workspaceRoot);
+    libStore.ensureDirectories();
+    return libStore;
+  }, [workspaceRoot]);
+
+  const help = parsedArgs.h || parsedArgs.help || false;
 
   const context = useMemo(
-    () => ({ store, library, workspaceRoot, args, command, subcommand, showHelp }),
-    [store, library, workspaceRoot, args, command, subcommand, help]
+    () => ({ store, library, workspaceRoot, args: parsedArgs, command: cmd, subcommand: sub, showHelp: () => help }),
+    [store, library, workspaceRoot, parsedArgs, cmd, sub, help]
   );
 
   return <CLIContext.Provider value={context}>{children}</CLIContext.Provider>;
