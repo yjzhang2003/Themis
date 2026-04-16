@@ -26,30 +26,24 @@ export { TaskStore } from '../task/store.js';
 
 function CLI() {
   const { args, store, library, command, subcommand, showHelp } = useCLI();
-  const [interactive, setInteractive] = useState(false);
 
-  useEffect(() => {
-    const cmdArgs = args._ as string[];
+  // Derive interactive mode directly from args to avoid stale closure issues
+  const cmdArgs = args._ as string[] || [];
+  const isInteractiveMode = !cmdArgs.length || (cmdArgs.length === 1 && !cmdArgs[0]);
 
-    // Check if we should enter interactive mode
-    // Interactive mode when: no command, or just 'th' without arguments
-    if (!cmdArgs?.length || (cmdArgs.length === 1 && !cmdArgs[0])) {
-      setInteractive(true);
-      return;
-    }
+  // Check for help flags
+  const isHelpMode = cmdArgs[0] === 'help' || args.h || args.help;
 
-    // Check for help flags
-    if (cmdArgs[0] === 'help' || args.h || args.help) {
-      showHelp();
-    }
-  }, [args, showHelp]);
+  // Interactive mode when: no command or explicitly requested, AND store/library are ready
+  const showInteractive = isInteractiveMode && !isHelpMode && store && library;
+  const showHelpFlag = isHelpMode || args.help || args.h;
 
   // Interactive mode
-  if (interactive && store && library) {
+  if (showInteractive) {
     return <InteractiveApp store={store} library={library} onQuit={() => process.exit(0)} />;
   }
 
-  if (showHelp()) {
+  if (showHelpFlag) {
     return <HelpCommand />;
   }
 

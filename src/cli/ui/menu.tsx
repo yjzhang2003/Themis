@@ -33,8 +33,9 @@ export function Menu({ title, items, onSelect, onBack, onQuit }: MenuProps) {
       return;
     }
 
-    const handler = (s: string) => {
-      const key = s.trim();
+    const handler = (s: string | Buffer) => {
+      const data = typeof s === 'string' ? s : s.toString();
+      const key = data.trim();
       if (!key) return;
 
       // Ctrl+C

@@ -293,14 +293,14 @@ thsHarness/
 - [x] Hook configuration system
 - [x] `hook add/list/link/unlink` commands
 
-### Phase 3: Interactive CLI
-- [ ] Interactive menu system with keyboard navigation
-- [ ] Main menu (Tasks, Skills, Hooks, OpenSpec, Settings)
-- [ ] Task list with selection
-- [ ] Task detail view with actions
-- [ ] Skill/Hook selection interfaces
-- [ ] Input forms for creating/editing
-- [ ] Command mode as fallback
+### Phase 3: Interactive CLI ✓
+- [x] Interactive menu system with keyboard navigation
+- [x] Main menu (Tasks, Skills, Hooks, OpenSpec placeholder, Settings placeholder)
+- [x] Task list with selection
+- [x] Task detail view with actions
+- [x] Skill/Hook selection interfaces
+- [x] Input forms for creating/editing
+- [x] Command mode as fallback
 
 ### Phase 4: OpenSpec Integration
 - [ ] OpenSpec change scanning
