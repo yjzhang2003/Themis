@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { render, Box, Text } from 'ink';
 import { CLIProvider, useCLI } from './context.js';
 import { InitCommand } from './commands/init.js';
@@ -20,18 +20,34 @@ import {
   HookLinkCommand,
   HookUnlinkCommand,
 } from './commands/hook.js';
+import { InteractiveApp } from './ui/views.js';
 
 export { TaskStore } from '../task/store.js';
 
 function CLI() {
   const { args, store, library, command, subcommand, showHelp } = useCLI();
+  const [interactive, setInteractive] = useState(false);
 
   useEffect(() => {
     const cmdArgs = args._ as string[];
-    if (!cmdArgs?.length || cmdArgs[0] === 'help' || args.h || args.help) {
+
+    // Check if we should enter interactive mode
+    // Interactive mode when: no command, or just 'th' without arguments
+    if (!cmdArgs?.length || (cmdArgs.length === 1 && !cmdArgs[0])) {
+      setInteractive(true);
+      return;
+    }
+
+    // Check for help flags
+    if (cmdArgs[0] === 'help' || args.h || args.help) {
       showHelp();
     }
   }, [args, showHelp]);
+
+  // Interactive mode
+  if (interactive && store && library) {
+    return <InteractiveApp store={store} library={library} onQuit={() => process.exit(0)} />;
+  }
 
   if (showHelp()) {
     return <HelpCommand />;
@@ -122,7 +138,8 @@ function CLI() {
       return (
         <Box flexDirection="column" padding={1}>
           <Text bold>Task Harness CLI</Text>
-          <Text dimColor>Use --help or run 'help' for usage information</Text>
+          <Text dimColor>Run <Text color="cyan">th</Text> for interactive mode</Text>
+          <Text dimColor>Run <Text color="cyan">th --help</Text> for command usage</Text>
         </Box>
       );
   }
