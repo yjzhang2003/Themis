@@ -20,6 +20,33 @@ export type TaskSkill = z.infer<typeof TaskSkillSchema>;
 export const TaskHooksSchema = z.record(z.string(), z.array(z.string()));
 export type TaskHooks = z.infer<typeof TaskHooksSchema>;
 
+// Phase 5: Attached resource schema
+export const AttachedResourceSchema = z.object({
+  type: z.enum(['skill', 'hook', 'rule']),
+  id: z.string(),
+  source: z.enum(['global', 'local']),
+  path: z.string(),
+});
+export type AttachedResource = z.infer<typeof AttachedResourceSchema>;
+
+// Phase 5: Isolation configuration
+export const IsolationConfigSchema = z.object({
+  env_vars: z.record(z.string()).optional(),
+  library_path: z.string().optional(),
+  workspace_restrict: z.boolean().default(true),
+});
+export type IsolationConfig = z.infer<typeof IsolationConfigSchema>;
+
+// Phase 5: Task session state
+export const TaskSessionSchema = z.object({
+  tmux_session: z.string(),
+  pid: z.number().optional(),
+  started_at: z.string(),
+  last_heartbeat: z.string(),
+  status: z.enum(['running', 'dead', 'unknown']).default('unknown'),
+});
+export type TaskSession = z.infer<typeof TaskSessionSchema>;
+
 export const TaskSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -33,6 +60,11 @@ export const TaskSchema = z.object({
   hooks: TaskHooksSchema.default({}),
   rules: z.array(z.string()).default([]),
   directory: z.string().optional(),
+  // Phase 5: New fields
+  session_name: z.string().optional(),
+  attached_resources: z.array(AttachedResourceSchema).default([]),
+  isolation_config: IsolationConfigSchema.optional(),
+  session: TaskSessionSchema.optional(),
 });
 export type Task = z.infer<typeof TaskSchema>;
 

@@ -21,6 +21,8 @@ import {
   HookUnlinkCommand,
 } from './commands/hook.js';
 import { OpenSpecCommand } from './commands/openspec.js';
+import { GlobalCommand } from './commands/global.js';
+import { SupervisorCommand, SessionCommand } from './commands/session.js';
 import { InteractiveApp } from './ui/views.js';
 
 export { TaskStore } from '../task/store.js';
@@ -132,6 +134,14 @@ function CLI() {
     case 'openspec':
     case 'os':
       return <OpenSpecCommand store={store} args={args} />;
+    case 'global':
+      return <GlobalCommand args={args} />;
+    case 'supervisor':
+    case 'sup':
+      return <SupervisorCommand args={args} />;
+    case 'session':
+    case 'ses':
+      return <SessionCommand args={args} />;
     default:
       return (
         <Box flexDirection="column" padding={1}>
