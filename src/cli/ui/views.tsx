@@ -86,6 +86,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               onSelect: () => setView('hooks'),
             },
           ]}
+          onBack={onQuit}
         />
 
         <Box marginTop={1} flexDirection="column">
@@ -126,6 +127,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               },
             })),
           ]}
+          onBack={goBack}
         />
 
         <Box marginTop={1}>
@@ -208,6 +210,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               onSelect: () => setView('task-delete-confirm'),
             },
           ]}
+          onBack={() => setView('tasks')}
         />
 
         <Box marginTop={1}>
@@ -273,6 +276,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               },
             })),
           ]}
+          onBack={goBack}
         />
 
         <Box marginTop={1} flexDirection="column">
@@ -311,6 +315,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               },
             })),
           ]}
+          onBack={() => setView('skills')}
         />
 
         <Box marginTop={1} flexDirection="column">
@@ -371,6 +376,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
                 setView('task-detail');
               },
             }))}
+          onBack={() => setView('task-detail')}
         />
 
         <Box marginTop={1}>
@@ -409,6 +415,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               },
             })),
           ]}
+          onBack={goBack}
         />
 
         <Box marginTop={1} flexDirection="column">
@@ -468,6 +475,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
                 setView('task-detail');
               },
             }))}
+          onBack={() => setView('task-detail')}
         />
 
         <Box marginTop={1}>

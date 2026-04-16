@@ -11,9 +11,10 @@ export interface SelectableItem {
 export interface ListBoxProps {
   items: SelectableItem[];
   onIndexChange?: (index: number) => void;
+  onBack?: () => void;
 }
 
-export function ListBox({ items, onIndexChange }: ListBoxProps) {
+export function ListBox({ items, onIndexChange, onBack }: ListBoxProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   useEffect(() => {
@@ -30,6 +31,13 @@ export function ListBox({ items, onIndexChange }: ListBoxProps) {
       const key = data.trim();
       if (s === '\u0003') {
         // Ctrl+C
+        return;
+      }
+      // Escape or Left arrow or h - go back
+      if (key === '\u001b[D' || key === 'h' || key === '\u001b') {
+        if (onBack) {
+          onBack();
+        }
         return;
       }
       if (key === '\u001b[A' || key === 'k') {
@@ -62,7 +70,7 @@ export function ListBox({ items, onIndexChange }: ListBoxProps) {
         // Ignore
       }
     };
-  }, [items, selectedIndex]);
+  }, [items, selectedIndex, onBack]);
 
   if (items.length === 0) {
     return (
