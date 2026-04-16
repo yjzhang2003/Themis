@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rmSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'fs';
 import { join } from 'path';
 import YAML from 'yaml';
 
@@ -86,10 +86,52 @@ export class LibraryStore {
   // Skills
   listSkills(): Skill[] {
     if (!existsSync(this.skillsPath)) return [];
-    const files = readdirSync(this.skillsPath).filter((f) => f.endsWith('.yaml'));
-    return files
-      .map((f) => this.getSkill(f.replace('.yaml', '')))
-      .filter((s): s is Skill => s !== null);
+    const entries = readdirSync(this.skillsPath);
+    const skills: Skill[] = [];
+
+    for (const entry of entries) {
+      const entryPath = join(this.skillsPath, entry);
+      const stat = statSync(entryPath);
+
+      if (stat.isFile() && entry.endsWith('.yaml')) {
+        // Legacy .yaml format
+        const skill = this.getSkill(entry.replace('.yaml', ''));
+        if (skill) skills.push(skill);
+      } else if (stat.isDirectory()) {
+        // Directory format with SKILL.md
+        const skillMdPath = join(entryPath, 'SKILL.md');
+        if (existsSync(skillMdPath)) {
+          const skill = this.getSkillFromDir(entry);
+          if (skill) skills.push(skill);
+        }
+      }
+    }
+
+    return skills;
+  }
+
+  getSkillFromDir(skillId: string): Skill | null {
+    const skillMdPath = join(this.skillsPath, skillId, 'SKILL.md');
+    if (!existsSync(skillMdPath)) return null;
+    try {
+      const content = readFileSync(skillMdPath, 'utf-8');
+      const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+      if (!frontmatterMatch) return null;
+      const data = YAML.parse(frontmatterMatch[1]) as Record<string, unknown>;
+      return {
+        id: skillId,
+        name: (data.name as string) || skillId,
+        description: (data.description as string) || '',
+        triggers: Array.isArray(data.trigger) ? data.trigger : data.trigger ? [data.trigger] : [],
+        commands: Array.isArray(data.commands) ? data.commands : [],
+        configuration: (data.configuration as Record<string, string>) || {},
+        content: content,
+        created_at: (data.created_at as string) || new Date().toISOString(),
+        updated_at: (data.updated_at as string) || new Date().toISOString(),
+      };
+    } catch {
+      return null;
+    }
   }
 
   getSkill(skillId: string): Skill | null {
