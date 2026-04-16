@@ -77,7 +77,6 @@ export function ListBox({ items, onIndexChange, onBack, onNextPage, onPrevPage }
     return () => {
       try {
         process.stdin.removeListener?.('data', handleData);
-        // Don't disable raw mode - let the next component or app handle it
       } catch {
         // Ignore
       }
