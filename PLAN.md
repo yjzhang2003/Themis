@@ -302,6 +302,14 @@ thsHarness/
 - [x] Input forms for creating/editing
 - [x] Command mode as fallback
 
+### Phase 3.5: Skill Categorization & Search
+- [ ] Auto-parse `category` from SKILL.md frontmatter (`metadata.scaffold.category`)
+- [ ] Add `listCategories()` method to LibraryStore
+- [ ] Add pagination to skill list (configurable page size, e.g., 10 per page)
+- [ ] Add search/filter by name or description
+- [ ] Interactive UI: Skills view shows categories first, then skills within category
+- [ ] Command mode: `th skill list --category <name>`, `th skill list --search <query>`, `th skill list --page <n>`
+
 ### Phase 4: OpenSpec Integration
 - [ ] OpenSpec change scanning
 - [ ] Task binding to changes
