@@ -12,6 +12,8 @@ type View =
   | 'task-create'
   | 'task-delete-confirm'
   | 'skills'
+  | 'skill-categories'
+  | 'skill-list'
   | 'skill-create'
   | 'skill-select'
   | 'hooks'
@@ -31,6 +33,9 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
   const [selectedHookId, setSelectedHookId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [skillCategory, setSkillCategory] = useState<string>('all');
+  const [skillPage, setSkillPage] = useState(1);
+  const [skillSearch, setSkillSearch] = useState('');
 
   const refresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -41,12 +46,16 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     setSelectedTaskId(null);
     setSelectedSkillId(null);
     setSelectedHookId(null);
+    setSkillCategory('all');
+    setSkillPage(1);
+    setSkillSearch('');
   }, []);
 
   // Main Menu
   if (view === 'main') {
     const tasks = store.listTasks();
-    const skills = library.listSkills();
+    const skillCategories = library.listCategories();
+    const totalSkills = skillCategories.reduce((sum, c) => sum + c.count, 0);
     const hooks = library.listHooks();
 
     return (
@@ -67,7 +76,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
             {
               id: 'skills',
               label: 'Skills',
-              description: `${skills.length} skill${skills.length !== 1 ? 's' : ''}`,
+              description: `${skillCategories.length} categories, ${totalSkills} skills`,
               onSelect: () => setView('skills'),
             },
             {
@@ -231,15 +240,16 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     );
   }
 
-  // Skills List
+  // Skills - show categories first
   if (view === 'skills') {
-    const skills = library.listSkills();
+    const categories = library.listCategories();
+    const totalSkills = categories.reduce((sum, c) => sum + c.count, 0);
 
     return (
       <Box flexDirection="column" flexGrow={1}>
         <Box borderStyle="bold" padding={1} marginBottom={1}>
           <Text bold>SKILLS</Text>
-          <Text dimColor> - {skills.length} skill{skills.length !== 1 ? 's' : ''}</Text>
+          <Text dimColor> - {categories.length} categories, {totalSkills} skills</Text>
         </Box>
 
         <ListBox
@@ -251,7 +261,48 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               description: 'Run: th skill add [name]',
               onSelect: () => setView('skill-create'),
             },
-            ...skills.map((s) => ({
+            ...categories.map((cat) => ({
+              id: cat.name,
+              label: cat.name,
+              description: `${cat.count} skill${cat.count !== 1 ? 's' : ''}`,
+              onSelect: () => {
+                setSkillCategory(cat.name);
+                setSkillPage(1);
+                setSkillSearch('');
+                setView('skill-list');
+              },
+            })),
+          ]}
+        />
+
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor>Skill files stored in: library/skills/</Text>
+          <Text dimColor>[Esc] Back to main menu</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Skill List - skills within a category
+  if (view === 'skill-list') {
+    const result = library.listSkillsByCategory(skillCategory, {
+      search: skillSearch || undefined,
+      page: skillPage,
+      pageSize: 8,
+    });
+
+    return (
+      <Box flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>SKILLS</Text>
+          <Text dimColor> - {skillCategory}</Text>
+          {skillSearch && <Text dimColor> (search: "{skillSearch}")</Text>}
+        </Box>
+
+        <ListBox
+          key={refreshKey}
+          items={[
+            ...result.skills.map((s) => ({
               id: s.id,
               label: s.name,
               description: s.description || '(no description)',
@@ -263,8 +314,12 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
         />
 
         <Box marginTop={1} flexDirection="column">
-          <Text dimColor>Skill files stored in: library/skills/</Text>
-          <Text dimColor>[Esc] Back to main menu</Text>
+          {result.totalPages > 1 && (
+            <Text dimColor>
+              Page {result.page}/{result.totalPages} ({result.total} skills)
+            </Text>
+          )}
+          <Text dimColor>[←] Back to categories [Esc] Main menu</Text>
         </Box>
       </Box>
     );

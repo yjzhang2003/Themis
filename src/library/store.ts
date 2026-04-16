@@ -6,6 +6,7 @@ export interface Skill {
   id: string;
   name: string;
   description: string;
+  category: string;
   triggers: string[];
   commands: string[];
   configuration: Record<string, string>;
@@ -110,6 +111,69 @@ export class LibraryStore {
     return skills;
   }
 
+  // Get unique categories from all skills
+  listCategories(): { name: string; count: number }[] {
+    const skills = this.listSkills();
+    const categoryMap = new Map<string, number>();
+
+    for (const skill of skills) {
+      const cat = skill.category || 'uncategorized';
+      categoryMap.set(cat, (categoryMap.get(cat) || 0) + 1);
+    }
+
+    return Array.from(categoryMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  // Get skills by category with optional search and pagination
+  listSkillsByCategory(
+    category?: string,
+    options?: {
+      search?: string;
+      page?: number;
+      pageSize?: number;
+    }
+  ): {
+    skills: Skill[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  } {
+    const pageSize = options?.pageSize || 10;
+    const page = options?.page || 1;
+    let skills = this.listSkills();
+
+    // Filter by category
+    if (category && category !== 'all') {
+      skills = skills.filter((s) => s.category === category);
+    }
+
+    // Filter by search query
+    if (options?.search) {
+      const query = options.search.toLowerCase();
+      skills = skills.filter(
+        (s) =>
+          s.name.toLowerCase().includes(query) ||
+          s.description.toLowerCase().includes(query)
+      );
+    }
+
+    const total = skills.length;
+    const totalPages = Math.ceil(total / pageSize);
+    const start = (page - 1) * pageSize;
+    const paginatedSkills = skills.slice(start, start + pageSize);
+
+    return {
+      skills: paginatedSkills,
+      total,
+      page,
+      pageSize,
+      totalPages,
+    };
+  }
+
   getSkillFromDir(skillId: string): Skill | null {
     const skillMdPath = join(this.skillsPath, skillId, 'SKILL.md');
     if (!existsSync(skillMdPath)) return null;
@@ -118,10 +182,13 @@ export class LibraryStore {
       const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
       if (!frontmatterMatch) return null;
       const data = YAML.parse(frontmatterMatch[1]) as Record<string, unknown>;
+      const metadata = data.metadata as Record<string, unknown> | undefined;
+      const scaffold = metadata?.scaffold as Record<string, unknown> | undefined;
       return {
         id: skillId,
         name: (data.name as string) || skillId,
         description: (data.description as string) || '',
+        category: (scaffold?.category as string) || 'uncategorized',
         triggers: Array.isArray(data.trigger) ? data.trigger : data.trigger ? [data.trigger] : [],
         commands: Array.isArray(data.commands) ? data.commands : [],
         configuration: (data.configuration as Record<string, string>) || {},

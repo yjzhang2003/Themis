@@ -54,7 +54,7 @@ function CLI() {
         return <SkillAddCommand library={library} store={store} args={args} />;
       case 'list':
       case 'ls':
-        return <SkillListCommand library={library} />;
+        return <SkillListCommand library={library} args={args} />;
       case 'link':
         return <SkillLinkCommand library={library} store={store} args={args} />;
       case 'unlink':

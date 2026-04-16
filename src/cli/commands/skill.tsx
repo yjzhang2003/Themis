@@ -73,28 +73,39 @@ export function SkillAddCommand({ library, args }: SkillCommandProps) {
   );
 }
 
-export function SkillListCommand({ library }: { library: LibraryStore | null }) {
-  const [skills, setSkills] = useState<Skill[]>([]);
-  const [error, setError] = useState<string | null>(null);
+export function SkillListCommand({ library, args }: SkillCommandProps) {
+  const [output, setOutput] = useState<{ categories?: { name: string; count: number }[]; skills?: Skill[]; pagination?: { page: number; totalPages: number; total: number }; error?: string }>({});
 
   useEffect(() => {
     if (!library) {
-      setError('Not in a workspace');
+      setOutput({ error: 'Not in a workspace' });
       return;
     }
 
     try {
-      setSkills(library.listSkills());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error');
-    }
-  }, [library]);
+      const category = args.category as string | undefined;
+      const search = args.search as string | undefined;
+      const page = args.page ? parseInt(args.page as string, 10) : 1;
 
-  if (error) {
+      if (category || search) {
+        // Show filtered/paginated skills
+        const result = library.listSkillsByCategory(category || undefined, { search, page });
+        setOutput({ skills: result.skills, pagination: { page: result.page, totalPages: result.totalPages, total: result.total } });
+      } else {
+        // Show all categories
+        const categories = library.listCategories();
+        setOutput({ categories });
+      }
+    } catch (e) {
+      setOutput({ error: e instanceof Error ? e.message : 'Unknown error' });
+    }
+  }, [library, args]);
+
+  if (output.error) {
     return (
       <Box padding={1}>
         <Text>
-          <Text color="red">Error:</Text> {error}
+          <Text color="red">Error:</Text> {output.error}
         </Text>
       </Box>
     );
@@ -103,20 +114,44 @@ export function SkillListCommand({ library }: { library: LibraryStore | null }) 
   return (
     <Box flexDirection="column" padding={1}>
       <Text bold>Skills</Text>
-      {skills.length === 0 ? (
-        <Box marginTop={1}>
-          <Text dimColor>No skills yet. Run 'th skill add [name]' to create one.</Text>
-        </Box>
-      ) : (
+      {output.categories && (
         <Box flexDirection="column" marginTop={1}>
-          {skills.map((skill) => (
-            <Box key={skill.id} marginBottom={1}>
-              <Text color="cyan" width={20}>
-                {skill.id}
+          <Text dimColor>Categories:</Text>
+          {output.categories.map((cat) => (
+            <Box key={cat.name} marginTop={1}>
+              <Text>
+                <Text color="cyan">[{cat.count}]</Text> <Text bold>{cat.name}</Text>
               </Text>
-              <Text>{skill.description || '(no description)'}</Text>
             </Box>
           ))}
+          <Box marginTop={1}>
+            <Text dimColor>Use: th skill list --category &lt;name&gt; [--search &lt;query&gt;] [--page &lt;n&gt;]</Text>
+          </Box>
+        </Box>
+      )}
+      {output.skills && (
+        <Box flexDirection="column" marginTop={1}>
+          {output.skills.length === 0 ? (
+            <Text dimColor>No skills found.</Text>
+          ) : (
+            <>
+              {output.skills.map((skill) => (
+                <Box key={skill.id} marginBottom={1}>
+                  <Text color="cyan" width={25}>
+                    {skill.id}
+                  </Text>
+                  <Text>{skill.description || '(no description)'}</Text>
+                </Box>
+              ))}
+              {output.pagination && (
+                <Box marginTop={1}>
+                  <Text dimColor>
+                    Page {output.pagination.page}/{output.pagination.totalPages} ({output.pagination.total} total)
+                  </Text>
+                </Box>
+              )}
+            </>
+          )}
         </Box>
       )}
     </Box>
