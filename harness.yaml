@@ -1,0 +1,4 @@
+version: '1.0'
+workspace_root: /Volumes/TiPlus7100 1TB/thsHarness/harness
+library_path: ./library
+tasks_path: ./tasks
