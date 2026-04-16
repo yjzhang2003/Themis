@@ -12,6 +12,7 @@ type View =
   | 'task-detail'
   | 'task-create'
   | 'task-delete-confirm'
+  | 'task-openspec-bind'
   | 'skills'
   | 'skill-categories'
   | 'skill-list'
@@ -22,6 +23,7 @@ type View =
   | 'hook-select'
   | 'openspec'
   | 'openspec-change'
+  | 'openspec-task-select'
   | 'back-confirm';
 
 interface InteractiveAppProps {
@@ -186,6 +188,9 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
           <Text>Skills: {task.skills.length} linked</Text>
           <Text>Hooks: {Object.values(task.hooks).flat().length} linked</Text>
           <Text>Created: {new Date(task.created_at).toLocaleDateString()}</Text>
+          {task.openspec?.change && (
+            <Text>OpenSpec: <Text color="cyan">{task.openspec.change}</Text></Text>
+          )}
         </Box>
 
         <Box marginTop={1} flexDirection="column">
@@ -218,6 +223,23 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               description: 'Link a hook to this task',
               onSelect: () => setView('hook-select'),
             },
+            {
+              id: 'bind-openspec',
+              label: task.openspec?.change ? 'Change OpenSpec Binding' : 'Bind OpenSpec',
+              description: task.openspec?.change ? `Bound to: ${task.openspec.change}` : 'Link to OpenSpec change',
+              onSelect: () => setView('task-openspec-bind'),
+            },
+            ...(task.openspec?.change ? [{
+              id: 'unbind-openspec',
+              label: 'Unbind OpenSpec',
+              description: 'Remove OpenSpec binding',
+              onSelect: () => {
+                store.updateTask(selectedTaskId, {
+                  openspec: undefined,
+                });
+                refresh();
+              },
+            }] : []),
             {
               id: 'delete',
               label: 'Delete Task',
@@ -255,6 +277,112 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
         }}
         onCancel={() => setView('task-detail')}
       />
+    );
+  }
+
+  // Task OpenSpec Bind
+  if (view === 'task-openspec-bind' && selectedTaskId) {
+    const task = store.getTask(selectedTaskId);
+    const scanPath = join(process.cwd(), '..');
+    const project = openspecProject || scanOpenSpecProject(scanPath);
+
+    if (!project) {
+      return (
+        <Box key="task-openspec-bind" flexDirection="column" flexGrow={1}>
+          <Box borderStyle="bold" padding={1} marginBottom={1}>
+            <Text bold>BIND OPENSPEC</Text>
+          </Box>
+          <Box padding={1}>
+            <Text>No OpenSpec project scanned yet.</Text>
+            <Text dimColor marginTop={1}>Go to OpenSpec in main menu and scan a project first.</Text>
+          </Box>
+          <Box marginTop={1} flexDirection="column">
+            <Text dimColor paddingX={1}>[Esc] Back to task</Text>
+          </Box>
+        </Box>
+      );
+    }
+
+    return (
+      <Box key="task-openspec-bind" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>BIND OPENSPEC</Text>
+          <Text dimColor> - {project.name}</Text>
+        </Box>
+
+        <ListBox
+          key={`task-openspec-bind-${refreshKey}`}
+          items={project.changes.map((change) => ({
+            id: change.id,
+            label: change.name || change.id,
+            description: `${change.capabilities.length} capabilities`,
+            onSelect: () => {
+              if (!task) return;
+              store.updateTask(selectedTaskId, {
+                openspec: {
+                  change: change.id,
+                  capability: undefined,
+                  path: project.root,
+                },
+              });
+              refresh();
+              setView('task-detail');
+            },
+          }))}
+          onBack={() => setView('task-detail')}
+        />
+
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor>Select a change to bind to this task</Text>
+          <Text dimColor>[Esc] Back to task</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // OpenSpec Task Select (select a task to bind to the selected change)
+  if (view === 'openspec-task-select' && selectedChangeId && openspecProject) {
+    const tasks = store.listTasks();
+    const change = openspecProject.changes.find((c) => c.id === selectedChangeId);
+
+    if (!change) {
+      setView('openspec');
+      return null;
+    }
+
+    return (
+      <Box key="openspec-task-select" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>BIND TO TASK</Text>
+          <Text dimColor> - {change.name || change.id}</Text>
+        </Box>
+
+        <ListBox
+          key={`openspec-task-select-${refreshKey}`}
+          items={tasks.map((t) => ({
+            id: t.id,
+            label: t.name,
+            description: t.openspec?.change ? `Bound to: ${t.openspec.change}` : 'No OpenSpec binding',
+            onSelect: () => {
+              store.updateTask(t.id, {
+                openspec: {
+                  change: change.id,
+                  capability: undefined,
+                  path: openspecProject.root,
+                },
+              });
+              refresh();
+              setView('openspec-change');
+            },
+          }))}
+          onBack={() => setView('openspec-change')}
+        />
+
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor>Select a task to bind to this change</Text>
+          <Text dimColor>[Esc] Back to change detail</Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -584,6 +712,23 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
             ))}
           </Box>
         )}
+
+        <Box marginTop={1} flexDirection="column">
+          <Text bold paddingX={1}>Actions:</Text>
+        </Box>
+
+        <ListBox
+          key={`openspec-change-actions-${refreshKey}`}
+          items={[
+            {
+              id: 'bind-task',
+              label: 'Bind to Task',
+              description: 'Link this change to a task',
+              onSelect: () => setView('openspec-task-select'),
+            },
+          ]}
+          onBack={() => setView('openspec')}
+        />
 
         <Box marginTop={1} flexDirection="column">
           <Text dimColor paddingX={1}>[Esc] Back to OpenSpec</Text>

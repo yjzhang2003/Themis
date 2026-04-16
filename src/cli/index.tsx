@@ -20,6 +20,7 @@ import {
   HookLinkCommand,
   HookUnlinkCommand,
 } from './commands/hook.js';
+import { OpenSpecCommand } from './commands/openspec.js';
 import { InteractiveApp } from './ui/views.js';
 
 export { TaskStore } from '../task/store.js';
@@ -128,6 +129,9 @@ function CLI() {
     case 'activate':
     case 'ac':
       return <ActivateCommand store={store} library={library} args={args} />;
+    case 'openspec':
+    case 'os':
+      return <OpenSpecCommand store={store} args={args} />;
     default:
       return (
         <Box flexDirection="column" padding={1}>
