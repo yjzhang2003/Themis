@@ -22,7 +22,7 @@ export function SkillAddCommand({ library, args }: SkillCommandProps) {
 
     const name = args._[2] as string | undefined;
     if (!name) {
-      setResult({ success: false, error: 'Usage: th skill add <name>' });
+      setResult({ success: false, error: 'Usage: tharness skill add <name>' });
       return;
     }
 
@@ -125,7 +125,7 @@ export function SkillListCommand({ library, args }: SkillCommandProps) {
             </Box>
           ))}
           <Box marginTop={1}>
-            <Text dimColor>Use: th skill list --category &lt;name&gt; [--search &lt;query&gt;] [--page &lt;n&gt;]</Text>
+            <Text dimColor>Use: tharness skill list --category &lt;name&gt; [--search &lt;query&gt;] [--page &lt;n&gt;]</Text>
           </Box>
         </Box>
       )}
@@ -181,7 +181,7 @@ export function SkillLinkCommand({
     const taskId = (args._[3] as string | undefined) || store.getConfig().active_task;
 
     if (!skillId) {
-      setResult({ success: false, error: 'Usage: th skill link <skill-id> [task-id]' });
+      setResult({ success: false, error: 'Usage: tharness skill link <skill-id> [task-id]' });
       return;
     }
 
@@ -259,7 +259,7 @@ export function SkillUnlinkCommand({
     const taskId = (args._[3] as string | undefined) || store.getConfig().active_task;
 
     if (!skillId) {
-      setResult({ success: false, error: 'Usage: th skill unlink <skill-id> [task-id]' });
+      setResult({ success: false, error: 'Usage: tharness skill unlink <skill-id> [task-id]' });
       return;
     }
 

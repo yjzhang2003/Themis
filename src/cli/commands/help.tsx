@@ -9,7 +9,7 @@ export function HelpCommand() {
 
       <Box marginTop={1} flexDirection="column">
         <Text bold>Usage:</Text>
-        <Text>  th &lt;command&gt; [options]</Text>
+        <Text>  tharness &lt;command&gt; [options]</Text>
       </Box>
 
       <Box marginTop={1} flexDirection="column">
@@ -51,7 +51,7 @@ export function HelpCommand() {
       </Box>
 
       <Box marginTop={1}>
-        <Text dimColor>Run 'th &lt;command&gt; --help' for command-specific help</Text>
+        <Text dimColor>Run 'tharness &lt;command&gt; --help' for command-specific help</Text>
       </Box>
     </Box>
   );

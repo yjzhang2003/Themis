@@ -14,50 +14,50 @@ npm install
 ### 初始化工作区
 
 ```bash
-./bin/th.js init
+./bin/tharness.js init
 ```
 
 ### 创建任务
 
 ```bash
-./bin/th.js new "My Feature"
+./bin/tharness.js new "My Feature"
 ```
 
 ### 激活任务
 
 ```bash
-./bin/th.js activate task-001
+./bin/tharness.js activate task-001
 ```
 
 ## 命令
 
 ### 工作区
 ```bash
-th init              # 初始化工作区
+tharness init              # 初始化工作区
 ```
 
 ### 任务
 ```bash
-th new <name>       # 创建新任务
-th list             # 列出所有任务
-th status [id]      # 查看任务状态
-th activate <id>     # 激活任务 (生成 .claude/)
+tharness new <name>       # 创建新任务
+tharness list             # 列出所有任务
+tharness status [id]      # 查看任务状态
+tharness activate <id>     # 激活任务 (生成 .claude/)
 ```
 
 ### Skills
 ```bash
-th skill add <name>              # 创建技能
-th skill list                    # 列出所有技能
-th skill link <id> [task-id]    # 绑定技能到任务
-th skill unlink <id> [task-id]  # 解绑技能
+tharness skill add <name>              # 创建技能
+tharness skill list                    # 列出所有技能
+tharness skill link <id> [task-id]    # 绑定技能到任务
+tharness skill unlink <id> [task-id]  # 解绑技能
 ```
 
 ### Hooks
 ```bash
-th hook add <name> <type> --command <cmd>  # 创建钩子
-th hook list                            # 列出所有钩子
-th hook link <id> [task-id]           # 绑定钩子到任务
-th hook unlink <id> [task-id]         # 解绑钩子
+tharness hook add <name> <type> --command <cmd>  # 创建钩子
+tharness hook list                            # 列出所有钩子
+tharness hook link <id> [task-id]           # 绑定钩子到任务
+tharness hook unlink <id> [task-id]         # 解绑钩子
 ```
 
 **Hook 类型**: `PreToolUse`, `PostToolUse`, `Stop`
@@ -66,17 +66,17 @@ th hook unlink <id> [task-id]         # 解绑钩子
 
 ```bash
 # 初始化
-th init
+tharness init
 
 # 创建技能和钩子
-th skill add tdd --description "Test-driven development"
-th hook add format PostToolUse --command "prettier --write" --matcher "Write|Edit"
+tharness skill add tdd --description "Test-driven development"
+tharness hook add format PostToolUse --command "prettier --write" --matcher "Write|Edit"
 
 # 创建任务并绑定
-th new "API Feature"
-th skill link tdd task-001
-th hook link format task-001
-th activate task-001
+tharness new "API Feature"
+tharness skill link tdd task-001
+tharness hook link format task-001
+tharness activate task-001
 ```
 
 ## 文件结构

@@ -132,7 +132,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
         />
 
         <Box marginTop={1} flexDirection="column">
-          <Text dimColor>Commands: th new, th skill add, th hook add</Text>
+          <Text dimColor>Commands: tharness new, tharness skill add, tharness hook add</Text>
           <Text dimColor>[q] Quit</Text>
         </Box>
       </Box>
@@ -342,7 +342,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
             {
               id: 'new',
               label: '+ Create New Task',
-              description: 'Run: th new [name]',
+              description: 'Run: tharness new [name]',
               onSelect: () => {
                 setView('task-create');
               },
@@ -618,7 +618,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
             {
               id: 'new',
               label: '+ Create New Skill',
-              description: 'Run: th skill add [name]',
+              description: 'Run: tharness skill add [name]',
               onSelect: () => {
                 setView('skill-create');
               },
@@ -766,7 +766,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
             {
               id: 'new',
               label: '+ Create New Hook',
-              description: 'Run: th hook add [name] [type]',
+              description: 'Run: tharness hook add [name] [type]',
               onSelect: () => {
                 setView('hook-create');
               },

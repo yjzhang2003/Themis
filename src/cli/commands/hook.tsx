@@ -26,12 +26,12 @@ export function HookAddCommand({ library, store, args }: HookCommandProps) {
     const matcher = (args.matcher || args.m) as string | undefined;
 
     if (!name) {
-      setResult({ success: false, error: 'Usage: th hook add <name> <type> --command <cmd> [--matcher <pattern>]' });
+      setResult({ success: false, error: 'Usage: tharness hook add <name> <type> --command <cmd> [--matcher <pattern>]' });
       return;
     }
 
     if (!command) {
-      setResult({ success: false, error: 'Usage: th hook add <name> <type> --command <cmd>' });
+      setResult({ success: false, error: 'Usage: tharness hook add <name> <type> --command <cmd>' });
       return;
     }
 
@@ -120,7 +120,7 @@ export function HookListCommand({ library }: { library: LibraryStore | null }) {
       <Text bold>Hooks</Text>
       {hooks.length === 0 ? (
         <Box marginTop={1}>
-          <Text dimColor>No hooks yet. Run 'th hook add [name] [type] --command [cmd]' to create one.</Text>
+          <Text dimColor>No hooks yet. Run 'tharness hook add [name] [type] --command [cmd]' to create one.</Text>
         </Box>
       ) : (
         <Box flexDirection="column" marginTop={1}>
@@ -166,7 +166,7 @@ export function HookLinkCommand({
     const taskId = (args._[3] as string | undefined) || store.getConfig().active_task;
 
     if (!hookId) {
-      setResult({ success: false, error: 'Usage: th hook link <hook-id> [task-id]' });
+      setResult({ success: false, error: 'Usage: tharness hook link <hook-id> [task-id]' });
       return;
     }
 
@@ -247,7 +247,7 @@ export function HookUnlinkCommand({
     const taskId = (args._[3] as string | undefined) || store.getConfig().active_task;
 
     if (!hookId) {
-      setResult({ success: false, error: 'Usage: th hook unlink <hook-id> [task-id]' });
+      setResult({ success: false, error: 'Usage: tharness hook unlink <hook-id> [task-id]' });
       return;
     }
 

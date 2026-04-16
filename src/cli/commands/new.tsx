@@ -19,7 +19,7 @@ export function NewCommand({ store, args }: NewCommandProps) {
 
     const nameArg = args._[1] as string | undefined;
     if (!nameArg) {
-      setError('Usage: th new <task-name>');
+      setError('Usage: tharness new <task-name>');
       return;
     }
 

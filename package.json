@@ -4,7 +4,7 @@
   "description": "Claude Code Task Management System with INK CLI",
   "type": "module",
   "bin": {
-    "th": "./bin/th.js"
+    "tharness": "./bin/tharness.js"
   },
   "scripts": {
     "build": "tsc",

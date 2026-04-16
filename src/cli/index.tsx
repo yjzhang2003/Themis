@@ -68,16 +68,16 @@ function CLI() {
           <Box flexDirection="column" padding={1}>
             <Text bold>Skill Commands</Text>
             <Text>
-              <Text color="cyan">th skill add &lt;name&gt;</Text> - Create a new skill
+              <Text color="cyan">tharness skill add &lt;name&gt;</Text> - Create a new skill
             </Text>
             <Text>
-              <Text color="cyan">th skill list</Text> - List all skills
+              <Text color="cyan">tharness skill list</Text> - List all skills
             </Text>
             <Text>
-              <Text color="cyan">th skill link &lt;skill-id&gt; [task-id]</Text> - Link skill to task
+              <Text color="cyan">tharness skill link &lt;skill-id&gt; [task-id]</Text> - Link skill to task
             </Text>
             <Text>
-              <Text color="cyan">th skill unlink &lt;skill-id&gt; [task-id]</Text> - Unlink skill from task
+              <Text color="cyan">tharness skill unlink &lt;skill-id&gt; [task-id]</Text> - Unlink skill from task
             </Text>
           </Box>
         );
@@ -101,17 +101,17 @@ function CLI() {
           <Box flexDirection="column" padding={1}>
             <Text bold>Hook Commands</Text>
             <Text>
-              <Text color="cyan">th hook add &lt;name&gt; &lt;type&gt;</Text> --command &lt;cmd&gt; - Create a hook
+              <Text color="cyan">tharness hook add &lt;name&gt; &lt;type&gt;</Text> --command &lt;cmd&gt; - Create a hook
             </Text>
             <Text dimColor>  Types: PreToolUse, PostToolUse, Stop</Text>
             <Text>
-              <Text color="cyan">th hook list</Text> - List all hooks
+              <Text color="cyan">tharness hook list</Text> - List all hooks
             </Text>
             <Text>
-              <Text color="cyan">th hook link &lt;hook-id&gt; [task-id]</Text> - Link hook to task
+              <Text color="cyan">tharness hook link &lt;hook-id&gt; [task-id]</Text> - Link hook to task
             </Text>
             <Text>
-              <Text color="cyan">th hook unlink &lt;hook-id&gt; [task-id]</Text> - Unlink hook from task
+              <Text color="cyan">tharness hook unlink &lt;hook-id&gt; [task-id]</Text> - Unlink hook from task
             </Text>
           </Box>
         );
@@ -150,8 +150,8 @@ function CLI() {
       return (
         <Box flexDirection="column" padding={1}>
           <Text bold>Task Harness CLI</Text>
-          <Text dimColor>Run <Text color="cyan">th</Text> for interactive mode</Text>
-          <Text dimColor>Run <Text color="cyan">th --help</Text> for command usage</Text>
+          <Text dimColor>Run <Text color="cyan">tharness</Text> for interactive mode</Text>
+          <Text dimColor>Run <Text color="cyan">tharness --help</Text> for command usage</Text>
         </Box>
       );
   }

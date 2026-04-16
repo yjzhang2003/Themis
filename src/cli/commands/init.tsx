@@ -78,7 +78,7 @@ export function InitCommand({ store }: InitCommandProps) {
           </Box>
           <Box marginTop={1}>
             <Text>
-              Run <Text color="cyan">th new [name]</Text> to create your first task
+              Run <Text color="cyan">tharness new [name]</Text> to create your first task
             </Text>
           </Box>
         </>
