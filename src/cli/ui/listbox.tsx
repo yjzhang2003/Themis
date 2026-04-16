@@ -25,10 +25,6 @@ export function ListBox({ items, initialIndex = 0, onIndexChange, onBack, onNext
   }, [items, initialIndex]);
 
   useEffect(() => {
-    onIndexChange?.(selectedIndex);
-  }, [selectedIndex, onIndexChange]);
-
-  useEffect(() => {
     const handleData = (s: string | Buffer) => {
       const data = typeof s === 'string' ? s : s.toString();
       const key = data.trim();
