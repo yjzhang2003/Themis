@@ -34,7 +34,7 @@ interface CLIProviderProps {
 export function CLIProvider({ children }: CLIProviderProps) {
   const [store, setStore] = useState<TaskStore | null>(null);
   const [library, setLibrary] = useState<LibraryStore | null>(null);
-  const [workspaceRoot] = useState(() => process.cwd());
+  const [workspaceRoot] = useState(() => process.env.ORIGINAL_PWD || process.cwd());
   const [args, setArgs] = useState<Record<string, unknown>>({});
   const [command, setCommand] = useState('');
   const [subcommand, setSubcommand] = useState('');
@@ -52,8 +52,8 @@ export function CLIProvider({ children }: CLIProviderProps) {
     setHelp(cliArgs.h || cliArgs.help || false);
 
     // Find workspace root by looking for harness.yaml
-    // Start from current directory and walk up
-    let root = process.cwd();
+    // Start from the directory where th was invoked
+    let root = process.env.ORIGINAL_PWD || process.cwd();
     let current = root;
     let found = false;
     const maxIter = 20;
