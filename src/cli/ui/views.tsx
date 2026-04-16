@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Box, Text } from 'ink';
+import { join } from 'path';
 import { TaskStore } from '../../task/store.js';
 import { LibraryStore, Skill, Hook } from '../../library/store.js';
 import { ListBox } from './listbox.js';
-import { Menu, MenuItem } from './menu.js';
+import { scanOpenSpecProject, OpenSpecProject } from '../../openspec/scanner.js';
 
 type View =
   | 'main'
@@ -19,6 +20,8 @@ type View =
   | 'hooks'
   | 'hook-create'
   | 'hook-select'
+  | 'openspec'
+  | 'openspec-change'
   | 'back-confirm';
 
 interface InteractiveAppProps {
@@ -36,6 +39,8 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
   const [skillCategory, setSkillCategory] = useState<string>('all');
   const [skillPage, setSkillPage] = useState(1);
   const [skillSearch, setSkillSearch] = useState('');
+  const [openspecProject, setOpenspecProject] = useState<OpenSpecProject | null>(null);
+  const [selectedChangeId, setSelectedChangeId] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -49,6 +54,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     setSkillCategory('all');
     setSkillPage(1);
     setSkillSearch('');
+    setSelectedChangeId(null);
   }, []);
 
   // Main Menu
@@ -84,6 +90,12 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               label: 'Hooks',
               description: `${hooks.length} hook${hooks.length !== 1 ? 's' : ''}`,
               onSelect: () => setView('hooks'),
+            },
+            {
+              id: 'openspec',
+              label: 'OpenSpec',
+              description: openspecProject ? `${openspecProject.changes.length} changes` : 'Scan project first',
+              onSelect: () => setView('openspec'),
             },
           ]}
           onBack={onQuit}
@@ -492,6 +504,89 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
 
         <Box marginTop={1}>
           <Text dimColor>[Esc] Back to task</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // OpenSpec - scan and list changes
+  if (view === 'openspec') {
+    const scanPath = join(process.cwd(), '..');
+
+    return (
+      <Box key="openspec" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>OPENSPEC</Text>
+        </Box>
+
+        <ListBox
+          key={`openspec-${refreshKey}`}
+          items={[
+            {
+              id: 'scan',
+              label: '+ Scan for OpenSpec Project',
+              description: 'Scan parent directory for OpenSpec',
+              onSelect: () => {
+                const project = scanOpenSpecProject(scanPath);
+                setOpenspecProject(project);
+                refresh();
+              },
+            },
+            ...(openspecProject?.changes.map((change) => ({
+              id: change.id,
+              label: change.name || change.id,
+              description: `${change.capabilities.length} capabilities`,
+              onSelect: () => {
+                setSelectedChangeId(change.id);
+                setView('openspec-change');
+              },
+            })) || []),
+          ]}
+          onBack={goBack}
+        />
+
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor>Scan finds changes/ directory with proposal.md</Text>
+          <Text dimColor>[Esc] Back to main menu</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // OpenSpec Change Detail
+  if (view === 'openspec-change' && selectedChangeId && openspecProject) {
+    const change = openspecProject.changes.find((c) => c.id === selectedChangeId);
+
+    if (!change) {
+      setView('openspec');
+      return null;
+    }
+
+    return (
+      <Box key="openspec-change" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>CHANGE: </Text>
+          <Text>{change.name || change.id}</Text>
+        </Box>
+
+        <Box paddingX={1} flexDirection="column">
+          <Text>Description: {change.description || '(none)'}</Text>
+          <Text>Capabilities: {change.capabilities.length}</Text>
+        </Box>
+
+        {change.capabilities.length > 0 && (
+          <Box marginTop={1} flexDirection="column">
+            <Text bold paddingX={1}>Capabilities:</Text>
+            {change.capabilities.map((cap, idx) => (
+              <Box key={idx} paddingX={2}>
+                <Text dimColor>• {cap}</Text>
+              </Box>
+            ))}
+          </Box>
+        )}
+
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor paddingX={1}>[Esc] Back to OpenSpec</Text>
         </Box>
       </Box>
     );
