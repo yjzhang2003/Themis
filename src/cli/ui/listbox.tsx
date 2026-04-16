@@ -96,6 +96,12 @@ export function ListBox({ items, onIndexChange, onBack, onNextPage, onPrevPage }
     <Box flexDirection="column">
       {items.map((item, index) => {
         const isSelected = index === selectedIndex;
+        // Truncate description to max width (terminal width minus prefix and padding)
+        const maxDescWidth = 60;
+        const descText = item.description?.split('\n')[0] || '';
+        const truncatedDesc = descText.length > maxDescWidth
+          ? descText.substring(0, maxDescWidth - 3) + '...'
+          : descText;
         return (
           <Box
             key={item.id}
@@ -115,8 +121,8 @@ export function ListBox({ items, onIndexChange, onBack, onNextPage, onPrevPage }
               <Text color={isSelected ? 'cyan' : undefined} bold={isSelected}>
                 • {item.label}
               </Text>
-              {item.description && (
-                <Text dimColor wrap="truncate">{item.description.split('\n')[0]}</Text>
+              {truncatedDesc && (
+                <Text dimColor>{truncatedDesc}</Text>
               )}
             </Box>
           </Box>
