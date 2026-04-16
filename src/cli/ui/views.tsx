@@ -41,6 +41,12 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     setRefreshKey((k) => k + 1);
   }, []);
 
+  // Clear terminal on view change to prevent stacking
+  useEffect(() => {
+    // Move cursor to top-left and clear from cursor to end of screen
+    process.stdout.write('\x1b[H\x1b[J');
+  }, [view]);
+
   const goBack = useCallback(() => {
     setView('main');
     setSelectedTaskId(null);
