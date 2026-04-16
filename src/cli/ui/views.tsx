@@ -3,14 +3,21 @@ import { Box, Text } from 'ink';
 import { join } from 'path';
 import { TaskStore } from '../../task/store.js';
 import { LibraryStore, Skill, Hook } from '../../library/store.js';
+import { GlobalLibraryStore } from '../../global-library/index.js';
 import { ListBox } from './listbox.js';
 import { scanOpenSpecProject, OpenSpecProject } from '../../openspec/scanner.js';
 
 type View =
   | 'main'
+  | 'global-resources'
+  | 'global-skills'
+  | 'global-skills-category'
+  | 'global-hooks'
+  | 'global-rules'
   | 'tasks'
   | 'task-detail'
   | 'task-create'
+  | 'task-create-resources'
   | 'task-delete-confirm'
   | 'task-openspec-bind'
   | 'skills'
@@ -24,6 +31,7 @@ type View =
   | 'openspec'
   | 'openspec-change'
   | 'openspec-task-select'
+  | 'sessions'
   | 'back-confirm';
 
 interface InteractiveAppProps {
@@ -43,6 +51,10 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
   const [skillSearch, setSkillSearch] = useState('');
   const [openspecProject, setOpenspecProject] = useState<OpenSpecProject | null>(null);
   const [selectedChangeId, setSelectedChangeId] = useState<string | null>(null);
+
+  // Global library store
+  const globalLibrary = new GlobalLibraryStore();
+  globalLibrary.ensureDirectories();
 
   const refresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -65,6 +77,9 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     const skillCategories = library.listCategories();
     const totalSkills = skillCategories.reduce((sum, c) => sum + c.count, 0);
     const hooks = library.listHooks();
+    const globalSkills = globalLibrary.listSkills();
+    const globalHooks = globalLibrary.listHooks();
+    const globalRules = globalLibrary.listRules();
 
     return (
       <Box key="main" flexDirection="column" flexGrow={1}>
@@ -76,6 +91,12 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
           key={`main-${refreshKey}`}
           items={[
             {
+              id: 'global-resources',
+              label: 'Global Resources',
+              description: `${globalSkills.length} skills, ${globalHooks.length} hooks, ${globalRules.length} rules`,
+              onSelect: () => setView('global-resources'),
+            },
+            {
               id: 'tasks',
               label: 'Tasks',
               description: `${tasks.length} task${tasks.length !== 1 ? 's' : ''}`,
@@ -83,15 +104,21 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
             },
             {
               id: 'skills',
-              label: 'Skills',
+              label: 'Project Skills',
               description: `${skillCategories.length} categories, ${totalSkills} skills`,
               onSelect: () => setView('skills'),
             },
             {
               id: 'hooks',
-              label: 'Hooks',
+              label: 'Project Hooks',
               description: `${hooks.length} hook${hooks.length !== 1 ? 's' : ''}`,
               onSelect: () => setView('hooks'),
+            },
+            {
+              id: 'sessions',
+              label: 'Sessions',
+              description: 'Manage running task sessions',
+              onSelect: () => setView('sessions'),
             },
             {
               id: 'openspec',
@@ -106,6 +133,192 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
         <Box marginTop={1} flexDirection="column">
           <Text dimColor>Commands: th new, th skill add, th hook add</Text>
           <Text dimColor>[q] Quit</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Global Resources - Browse First
+  if (view === 'global-resources') {
+    const globalSkills = globalLibrary.listSkills();
+    const globalHooks = globalLibrary.listHooks();
+    const globalRules = globalLibrary.listRules();
+
+    return (
+      <Box key="global-resources" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>GLOBAL RESOURCES</Text>
+          <Text dimColor> - ~/.claude/library/</Text>
+        </Box>
+
+        <ListBox
+          key={`global-resources-${refreshKey}`}
+          items={[
+            {
+              id: 'global-skills',
+              label: 'Skills',
+              description: `${globalSkills.length} skills`,
+              onSelect: () => setView('global-skills'),
+            },
+            {
+              id: 'global-hooks',
+              label: 'Hooks',
+              description: `${globalHooks.length} hooks`,
+              onSelect: () => setView('global-hooks'),
+            },
+            {
+              id: 'global-rules',
+              label: 'Rules',
+              description: `${globalRules.length} rules`,
+              onSelect: () => setView('global-rules'),
+            },
+          ]}
+          onBack={goBack}
+        />
+
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor>Browse system-wide resources</Text>
+          <Text dimColor>[Esc] Back to main menu</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Global Skills List
+  if (view === 'global-skills') {
+    const categories = globalLibrary.listSkillCategories();
+
+    return (
+      <Box key="global-skills" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>GLOBAL SKILLS</Text>
+        </Box>
+
+        <ListBox
+          key={`global-skills-${refreshKey}`}
+          items={categories.map((cat) => ({
+            id: cat.name,
+            label: cat.name,
+            description: `${cat.count} skills`,
+            onSelect: () => {
+              setSkillCategory(cat.name);
+              setView('global-skills-category');
+            },
+          }))}
+          onBack={() => setView('global-resources')}
+        />
+
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor>[Esc] Back to Global Resources</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Global Skills by Category
+  if (view === 'global-skills-category') {
+    const skills = globalLibrary.listSkillsByCategory(skillCategory);
+
+    return (
+      <Box key="global-skills-category" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>GLOBAL SKILLS</Text>
+          <Text dimColor> - {skillCategory}</Text>
+        </Box>
+
+        <ListBox
+          key={`global-skills-category-${refreshKey}`}
+          items={skills.map((s) => ({
+            id: s.id,
+            label: s.name,
+            description: s.description?.substring(0, 50) || '(no description)',
+            onSelect: () => {
+              setSelectedSkillId(s.id);
+            },
+          }))}
+          onBack={() => setView('global-skills')}
+        />
+
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor>[Esc] Back to categories</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Global Hooks List
+  if (view === 'global-hooks') {
+    const hooks = globalLibrary.listHooks();
+
+    return (
+      <Box key="global-hooks" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>GLOBAL HOOKS</Text>
+        </Box>
+
+        <ListBox
+          key={`global-hooks-${refreshKey}`}
+          items={hooks.map((h) => ({
+            id: h.id,
+            label: h.name,
+            description: `[${h.type}] ${h.command.substring(0, 40)}`,
+            onSelect: () => {
+              setSelectedHookId(h.id);
+            },
+          }))}
+          onBack={() => setView('global-resources')}
+        />
+
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor>[Esc] Back to Global Resources</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Global Rules List
+  if (view === 'global-rules') {
+    const rules = globalLibrary.listRules();
+
+    return (
+      <Box key="global-rules" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>GLOBAL RULES</Text>
+        </Box>
+
+        <ListBox
+          key={`global-rules-${refreshKey}`}
+          items={rules.map((r) => ({
+            id: r.id,
+            label: r.name,
+            description: r.description?.substring(0, 50) || '(no description)',
+            onSelect: () => {},
+          }))}
+          onBack={() => setView('global-resources')}
+        />
+
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor>[Esc] Back to Global Resources</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Sessions List
+  if (view === 'sessions') {
+    return (
+      <Box key="sessions" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>SESSIONS</Text>
+        </Box>
+
+        <Box padding={1}>
+          <Text dimColor>Session management requires tmux.</Text>
+          <Text dimColor>Commands: th session list, th session attach &lt;id&gt;</Text>
+        </Box>
+
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor>[Esc] Back to main menu</Text>
         </Box>
       </Box>
     );
