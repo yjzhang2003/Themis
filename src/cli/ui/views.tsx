@@ -85,6 +85,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
       <Box key="main" flexDirection="column" flexGrow={1}>
         <Box borderStyle="bold" padding={1} marginBottom={1}>
           <Text bold>TASK HARNESS</Text>
+          <Text dimColor> {process.cwd()}</Text>
         </Box>
 
         <ListBox
