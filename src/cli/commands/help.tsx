@@ -13,39 +13,40 @@ export function HelpCommand() {
       </Box>
 
       <Box marginTop={1} flexDirection="column">
-        <Text bold>Commands:</Text>
+        <Text bold>Workspace:</Text>
         <Box flexDirection="column" paddingLeft={2}>
           <CommandRow cmd="init" desc="Initialize workspace" />
-          <CommandRow cmd="new &lt;name&gt;" desc="Create new task" />
-          <CommandRow cmd="list, ls" desc="List all tasks" />
-          <CommandRow cmd="status [id]" desc="Show task status" />
-          <CommandRow cmd="help" desc="Show this help" />
         </Box>
       </Box>
 
       <Box marginTop={1} flexDirection="column">
-        <Text bold>Task Management:</Text>
+        <Text bold>Tasks:</Text>
         <Box flexDirection="column" paddingLeft={2}>
-          <CommandRow cmd="activate &lt;id&gt;" desc="Activate task (set up .claude/)" />
-          <CommandRow cmd="deactivate" desc="Deactivate current task" />
-          <CommandRow cmd="delete &lt;id&gt;" desc="Delete a task" />
+          <CommandRow cmd="new &lt;name&gt;" desc="Create new task" />
+          <CommandRow cmd="list, ls" desc="List all tasks" />
+          <CommandRow cmd="status [id]" desc="Show task status" />
+          <CommandRow cmd="activate &lt;id&gt;" desc="Activate task (setup .claude/)" />
         </Box>
       </Box>
 
       <Box marginTop={1} flexDirection="column">
         <Text bold>Skills:</Text>
         <Box flexDirection="column" paddingLeft={2}>
-          <CommandRow cmd="skill add &lt;name&gt;" desc="Add skill to library" />
-          <CommandRow cmd="skill list" desc="List available skills" />
-          <CommandRow cmd="skill link &lt;name&gt;" desc="Link skill to active task" />
+          <CommandRow cmd="skill add &lt;name&gt;" desc="Create a new skill" />
+          <CommandRow cmd="skill list" desc="List all skills" />
+          <CommandRow cmd="skill link &lt;id&gt; [task]" desc="Link skill to task" />
+          <CommandRow cmd="skill unlink &lt;id&gt; [task]" desc="Unlink skill from task" />
         </Box>
       </Box>
 
       <Box marginTop={1} flexDirection="column">
-        <Text bold>OpenSpec:</Text>
+        <Text bold>Hooks:</Text>
         <Box flexDirection="column" paddingLeft={2}>
-          <CommandRow cmd="openspec scan" desc="Scan for OpenSpec changes" />
-          <CommandRow cmd="bind &lt;task-id&gt; &lt;change&gt;" desc="Bind task to OpenSpec change" />
+          <CommandRow cmd="hook add &lt;name&gt; &lt;type&gt;" desc="Create a hook" />
+          <Text dimColor paddingLeft={2}>  Types: PreToolUse, PostToolUse, Stop</Text>
+          <CommandRow cmd="hook list" desc="List all hooks" />
+          <CommandRow cmd="hook link &lt;id&gt; [task]" desc="Link hook to task" />
+          <CommandRow cmd="hook unlink &lt;id&gt; [task]" desc="Unlink hook from task" />
         </Box>
       </Box>
 
@@ -59,7 +60,7 @@ export function HelpCommand() {
 function CommandRow({ cmd, desc }: { cmd: string; desc: string }) {
   return (
     <Box>
-      <Text color="cyan" width={24}>
+      <Text color="cyan" width={28}>
         {cmd}
       </Text>
       <Text>{desc}</Text>

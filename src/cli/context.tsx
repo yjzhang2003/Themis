@@ -1,20 +1,25 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { existsSync } from 'fs';
 import { TaskStore } from '../task/store.js';
+import { LibraryStore } from '../library/store.js';
 
 interface CLIContextType {
   store: TaskStore | null;
+  library: LibraryStore | null;
   workspaceRoot: string;
   args: Record<string, unknown>;
   command: string;
+  subcommand: string;
   showHelp: () => boolean;
 }
 
 const CLIContext = createContext<CLIContextType>({
   store: null,
+  library: null,
   workspaceRoot: process.cwd(),
   args: {},
   command: '',
+  subcommand: '',
   showHelp: () => false,
 });
 
@@ -28,9 +33,11 @@ interface CLIProviderProps {
 
 export function CLIProvider({ children }: CLIProviderProps) {
   const [store, setStore] = useState<TaskStore | null>(null);
+  const [library, setLibrary] = useState<LibraryStore | null>(null);
   const [workspaceRoot] = useState(() => process.cwd());
   const [args, setArgs] = useState<Record<string, unknown>>({});
   const [command, setCommand] = useState('');
+  const [subcommand, setSubcommand] = useState('');
   const [help, setHelp] = useState(false);
 
   useEffect(() => {
@@ -39,7 +46,9 @@ export function CLIProvider({ children }: CLIProviderProps) {
     setArgs(cliArgs);
 
     const cmd = (cliArgs._[0] as string) || '';
+    const sub = (cliArgs._[1] as string) || '';
     setCommand(cmd);
+    setSubcommand(sub);
     setHelp(cliArgs.h || cliArgs.help || false);
 
     // Find workspace root by looking for harness.yaml
@@ -78,14 +87,18 @@ export function CLIProvider({ children }: CLIProviderProps) {
       const taskStore = new TaskStore(root);
       taskStore.ensureDirectories();
       setStore(taskStore);
+
+      const libStore = new LibraryStore(root);
+      libStore.ensureDirectories();
+      setLibrary(libStore);
     }
   }, []);
 
   const showHelp = () => help;
 
   const context = useMemo(
-    () => ({ store, workspaceRoot, args, command, showHelp }),
-    [store, workspaceRoot, args, command, help]
+    () => ({ store, library, workspaceRoot, args, command, subcommand, showHelp }),
+    [store, library, workspaceRoot, args, command, subcommand, help]
   );
 
   return <CLIContext.Provider value={context}>{children}</CLIContext.Provider>;

@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "command": "eslint --fix",
+        "description": ""
+      }
+    ]
+  }
+}

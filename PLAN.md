@@ -301,10 +301,11 @@ thsHarness/
 - [ ] Basic task.yaml schema
 
 ### Phase 2: Skills/Hooks/Rules Management
-- [ ] Skill library structure
-- [ ] `skill add/list/remove` commands
-- [ ] Hook configuration system
-- [ ] Rule override system
+- [x] Skill library structure
+- [x] `skill add/list/link/unlink` commands
+- [x] Hook configuration system
+- [x] `hook add/list/link/unlink` commands
+- [ ] Rule override system (basic)
 
 ### Phase 3: OpenSpec Integration
 - [ ] OpenSpec change scanning

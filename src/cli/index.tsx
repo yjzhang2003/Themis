@@ -1,19 +1,30 @@
 #!/usr/bin/env node
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { render, Box, Text } from 'ink';
-import { TaskStore } from '../task/store.js';
-import { Task } from '../task/types.js';
 import { CLIProvider, useCLI } from './context.js';
 import { InitCommand } from './commands/init.js';
 import { NewCommand } from './commands/new.js';
 import { ListCommand } from './commands/list.js';
 import { StatusCommand } from './commands/status.js';
 import { HelpCommand } from './commands/help.js';
+import { ActivateCommand } from './commands/activate.js';
+import {
+  SkillAddCommand,
+  SkillListCommand,
+  SkillLinkCommand,
+  SkillUnlinkCommand,
+} from './commands/skill.js';
+import {
+  HookAddCommand,
+  HookListCommand,
+  HookLinkCommand,
+  HookUnlinkCommand,
+} from './commands/hook.js';
 
 export { TaskStore } from '../task/store.js';
 
 function CLI() {
-  const { args, store, command, showHelp } = useCLI();
+  const { args, store, library, command, subcommand, showHelp } = useCLI();
 
   useEffect(() => {
     const cmdArgs = args._ as string[];
@@ -24,6 +35,73 @@ function CLI() {
 
   if (showHelp()) {
     return <HelpCommand />;
+  }
+
+  // Skill commands
+  if (command === 'skill') {
+    switch (subcommand) {
+      case 'add':
+        return <SkillAddCommand library={library} store={store} args={args} />;
+      case 'list':
+      case 'ls':
+        return <SkillListCommand library={library} />;
+      case 'link':
+        return <SkillLinkCommand library={library} store={store} args={args} />;
+      case 'unlink':
+        return <SkillUnlinkCommand library={library} store={store} args={args} />;
+      default:
+        return (
+          <Box flexDirection="column" padding={1}>
+            <Text bold>Skill Commands</Text>
+            <Text>
+              <Text color="cyan">th skill add &lt;name&gt;</Text> - Create a new skill
+            </Text>
+            <Text>
+              <Text color="cyan">th skill list</Text> - List all skills
+            </Text>
+            <Text>
+              <Text color="cyan">th skill link &lt;skill-id&gt; [task-id]</Text> - Link skill to task
+            </Text>
+            <Text>
+              <Text color="cyan">th skill unlink &lt;skill-id&gt; [task-id]</Text> - Unlink skill from task
+            </Text>
+          </Box>
+        );
+    }
+  }
+
+  // Hook commands
+  if (command === 'hook') {
+    switch (subcommand) {
+      case 'add':
+        return <HookAddCommand library={library} store={store} args={args} />;
+      case 'list':
+      case 'ls':
+        return <HookListCommand library={library} />;
+      case 'link':
+        return <HookLinkCommand library={library} store={store} args={args} />;
+      case 'unlink':
+        return <HookUnlinkCommand library={library} store={store} args={args} />;
+      default:
+        return (
+          <Box flexDirection="column" padding={1}>
+            <Text bold>Hook Commands</Text>
+            <Text>
+              <Text color="cyan">th hook add &lt;name&gt; &lt;type&gt;</Text> --command &lt;cmd&gt; - Create a hook
+            </Text>
+            <Text dimColor>  Types: PreToolUse, PostToolUse, Stop</Text>
+            <Text>
+              <Text color="cyan">th hook list</Text> - List all hooks
+            </Text>
+            <Text>
+              <Text color="cyan">th hook link &lt;hook-id&gt; [task-id]</Text> - Link hook to task
+            </Text>
+            <Text>
+              <Text color="cyan">th hook unlink &lt;hook-id&gt; [task-id]</Text> - Unlink hook from task
+            </Text>
+          </Box>
+        );
+    }
   }
 
   switch (command) {
@@ -37,6 +115,9 @@ function CLI() {
     case 'status':
     case 'st':
       return <StatusCommand store={store} args={args} />;
+    case 'activate':
+    case 'ac':
+      return <ActivateCommand store={store} library={library} args={args} />;
     default:
       return (
         <Box flexDirection="column" padding={1}>

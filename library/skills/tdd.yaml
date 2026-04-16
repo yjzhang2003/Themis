@@ -1,0 +1,28 @@
+id: tdd
+name: tdd
+description: Test-driven development
+triggers: []
+commands: []
+configuration: {}
+content: |
+  # tdd Skill
+
+  ## Overview
+  Describe what this skill does and when to use it.
+
+  ## Triggers
+  - When to activate this skill
+  - Specific use cases
+
+  ## Workflow
+  1. Step one
+  2. Step two
+  3. Step three
+
+  ## Commands
+  - `/skill:tdd` - Description
+
+  ## Configuration
+  Optional configuration options.
+created_at: 2026-04-16T10:40:13.440Z
+updated_at: 2026-04-16T10:40:13.440Z
