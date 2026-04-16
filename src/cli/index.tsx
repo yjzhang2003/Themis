@@ -23,6 +23,7 @@ import {
 import { OpenSpecCommand } from './commands/openspec.js';
 import { GlobalCommand } from './commands/global.js';
 import { SupervisorCommand, SessionCommand } from './commands/session.js';
+import { TakeoverCommand } from './commands/takeover.js';
 import { InteractiveApp } from './ui/views.js';
 
 export { TaskStore } from '../task/store.js';
@@ -142,6 +143,9 @@ function CLI() {
     case 'session':
     case 'ses':
       return <SessionCommand args={args} />;
+    case 'takeover':
+    case 'to':
+      return <TakeoverCommand args={args} />;
     default:
       return (
         <Box flexDirection="column" padding={1}>
