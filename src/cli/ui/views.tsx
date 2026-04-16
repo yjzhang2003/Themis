@@ -316,12 +316,14 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
             })),
           ]}
           onBack={() => setView('skills')}
+          onNextPage={() => setSkillPage((p) => Math.min(result.totalPages, p + 1))}
+          onPrevPage={() => setSkillPage((p) => Math.max(1, p - 1))}
         />
 
         <Box marginTop={1} flexDirection="column">
           {result.totalPages > 1 && (
             <Text dimColor>
-              Page {result.page}/{result.totalPages} ({result.total} skills)
+              Page {result.page}/{result.totalPages} ({result.total} skills) [n/p] page
             </Text>
           )}
           <Text dimColor>[←] Back to categories [Esc] Main menu</Text>

@@ -12,9 +12,11 @@ export interface ListBoxProps {
   items: SelectableItem[];
   onIndexChange?: (index: number) => void;
   onBack?: () => void;
+  onNextPage?: () => void;
+  onPrevPage?: () => void;
 }
 
-export function ListBox({ items, onIndexChange, onBack }: ListBoxProps) {
+export function ListBox({ items, onIndexChange, onBack, onNextPage, onPrevPage }: ListBoxProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   useEffect(() => {
@@ -51,6 +53,16 @@ export function ListBox({ items, onIndexChange, onBack }: ListBoxProps) {
         if (items[selectedIndex]) {
           items[selectedIndex].onSelect();
         }
+      } else if (key === 'n') {
+        // n - next page
+        if (onNextPage) {
+          onNextPage();
+        }
+      } else if (key === 'p') {
+        // p - prev page
+        if (onPrevPage) {
+          onPrevPage();
+        }
       }
     };
 
@@ -70,7 +82,7 @@ export function ListBox({ items, onIndexChange, onBack }: ListBoxProps) {
         // Ignore
       }
     };
-  }, [items, selectedIndex, onBack]);
+  }, [items, selectedIndex, onBack, onNextPage, onPrevPage]);
 
   if (items.length === 0) {
     return (
@@ -104,7 +116,7 @@ export function ListBox({ items, onIndexChange, onBack }: ListBoxProps) {
                 • {item.label}
               </Text>
               {item.description && (
-                <Text dimColor>{item.description}</Text>
+                <Text dimColor wrap="truncate">{item.description.split('\n')[0]}</Text>
               )}
             </Box>
           </Box>
