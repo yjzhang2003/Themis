@@ -36,9 +36,16 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
   const [skillCategory, setSkillCategory] = useState<string>('all');
   const [skillPage, setSkillPage] = useState(1);
   const [skillSearch, setSkillSearch] = useState('');
+  // Track cursor positions for each view to remember selection
+  const [cursorPositions, setCursorPositions] = useState<Record<string, number>>({});
 
   const refresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
+  }, []);
+
+  // Save cursor position when leaving a view
+  const saveCursor = useCallback((viewName: string, position: number) => {
+    setCursorPositions((prev) => ({ ...prev, [viewName]: position }));
   }, []);
 
   const goBack = useCallback(() => {
@@ -115,18 +122,24 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               id: 'new',
               label: '+ Create New Task',
               description: 'Run: th new [name]',
-              onSelect: () => setView('task-create'),
+              onSelect: () => {
+                saveCursor('tasks', 0);
+                setView('task-create');
+              },
             },
             ...tasks.map((t) => ({
               id: t.id,
               label: `${t.name}`,
               description: `[${t.status}] ${t.skills.length} skills, ${Object.values(t.hooks).flat().length} hooks`,
               onSelect: () => {
+                saveCursor('tasks', tasks.indexOf(t) + 1);
                 setSelectedTaskId(t.id);
                 setView('task-detail');
               },
             })),
           ]}
+          initialIndex={cursorPositions['tasks'] || 0}
+          onIndexChange={(idx) => saveCursor('tasks', idx)}
           onBack={goBack}
         />
 
@@ -262,13 +275,17 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               id: 'new',
               label: '+ Create New Skill',
               description: 'Run: th skill add [name]',
-              onSelect: () => setView('skill-create'),
+              onSelect: () => {
+                saveCursor('skills', 0);
+                setView('skill-create');
+              },
             },
             ...categories.map((cat) => ({
               id: cat.name,
               label: cat.name,
               description: `${cat.count} skill${cat.count !== 1 ? 's' : ''}`,
               onSelect: () => {
+                saveCursor('skills', categories.indexOf(cat) + 1);
                 setSkillCategory(cat.name);
                 setSkillPage(1);
                 setSkillSearch('');
@@ -276,6 +293,8 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               },
             })),
           ]}
+          initialIndex={cursorPositions['skills'] || 0}
+          onIndexChange={(idx) => saveCursor('skills', idx)}
           onBack={goBack}
         />
 
@@ -311,13 +330,25 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               label: s.name,
               description: s.description || '(no description)',
               onSelect: () => {
+                saveCursor(`skill-list-${skillCategory}`, selectedIndex);
                 setSelectedSkillId(s.id);
               },
             })),
           ]}
-          onBack={() => setView('skills')}
-          onNextPage={() => setSkillPage((p) => Math.min(result.totalPages, p + 1))}
-          onPrevPage={() => setSkillPage((p) => Math.max(1, p - 1))}
+          initialIndex={cursorPositions[`skill-list-${skillCategory}`] || 0}
+          onIndexChange={(idx) => saveCursor(`skill-list-${skillCategory}`, idx)}
+          onBack={() => {
+            saveCursor(`skill-list-${skillCategory}`, selectedIndex);
+            setView('skills');
+          }}
+          onNextPage={() => {
+            saveCursor(`skill-list-${skillCategory}`, selectedIndex);
+            setSkillPage((p) => Math.min(result.totalPages, p + 1));
+          }}
+          onPrevPage={() => {
+            saveCursor(`skill-list-${skillCategory}`, selectedIndex);
+            setSkillPage((p) => Math.max(1, p - 1));
+          }}
         />
 
         <Box marginTop={1} flexDirection="column">
@@ -406,17 +437,23 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               id: 'new',
               label: '+ Create New Hook',
               description: 'Run: th hook add [name] [type]',
-              onSelect: () => setView('hook-create'),
+              onSelect: () => {
+                saveCursor('hooks', 0);
+                setView('hook-create');
+              },
             },
             ...hooks.map((h) => ({
               id: h.id,
               label: h.name,
               description: `[${h.type}] ${h.command}`,
               onSelect: () => {
+                saveCursor('hooks', hooks.indexOf(h) + 1);
                 setSelectedHookId(h.id);
               },
             })),
           ]}
+          initialIndex={cursorPositions['hooks'] || 0}
+          onIndexChange={(idx) => saveCursor('hooks', idx)}
           onBack={goBack}
         />
 

@@ -10,18 +10,19 @@ export interface SelectableItem {
 
 export interface ListBoxProps {
   items: SelectableItem[];
+  initialIndex?: number;
   onIndexChange?: (index: number) => void;
   onBack?: () => void;
   onNextPage?: () => void;
   onPrevPage?: () => void;
 }
 
-export function ListBox({ items, onIndexChange, onBack, onNextPage, onPrevPage }: ListBoxProps) {
-  const [selectedIndex, setSelectedIndex] = useState(0);
+export function ListBox({ items, initialIndex = 0, onIndexChange, onBack, onNextPage, onPrevPage }: ListBoxProps) {
+  const [selectedIndex, setSelectedIndex] = useState(initialIndex);
 
   useEffect(() => {
-    setSelectedIndex(0);
-  }, [items]);
+    setSelectedIndex(initialIndex);
+  }, [items, initialIndex]);
 
   useEffect(() => {
     onIndexChange?.(selectedIndex);
