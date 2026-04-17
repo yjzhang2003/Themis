@@ -78,7 +78,6 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     setSelectSkillPage(1);
     setSelectHookSearch('');
     setSelectHookPage(1);
-    setSelectedChangeId(null);
   }, []);
 
   // Main Menu
