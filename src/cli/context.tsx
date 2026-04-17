@@ -37,36 +37,13 @@ export function CLIProvider({ children }: CLIProviderProps) {
   const cmd = (parsedArgs._[0] as string) || '';
   const sub = (parsedArgs._[1] as string) || '';
 
-  // Find workspace root synchronously
+  // Find workspace root synchronously - only check current directory
   const workspaceRoot = useMemo(() => {
-    let root = process.env.ORIGINAL_PWD || process.cwd();
-    let current = root;
-    let found = false;
-    const maxIter = 20;
-    let iter = 0;
-
-    if (existsSync(`${current}/harness.yaml`)) {
-      root = current;
-      found = true;
+    const root = process.env.ORIGINAL_PWD || process.cwd();
+    if (existsSync(`${root}/harness.yaml`)) {
+      return root;
     }
-
-    while (iter < maxIter && !found) {
-      const configPath = `${current}/harness.yaml`;
-      try {
-        if (existsSync(configPath)) {
-          root = current;
-          found = true;
-        }
-      } catch {}
-
-      if (!found) {
-        const parent = `${current}/..`;
-        if (parent === current) break;
-        current = parent;
-      }
-      iter++;
-    }
-    return root;
+    return root; // Use current directory even without harness.yaml
   }, []);
 
   // Initialize stores synchronously
