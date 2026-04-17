@@ -54,7 +54,9 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
   const [skillPage, setSkillPage] = useState(1);
   const [skillSearch, setSkillSearch] = useState('');
   const [selectSkillSearch, setSelectSkillSearch] = useState('');
+  const [selectSkillPage, setSelectSkillPage] = useState(1);
   const [selectHookSearch, setSelectHookSearch] = useState('');
+  const [selectHookPage, setSelectHookPage] = useState(1);
   const [openspecProject, setOpenspecProject] = useState<OpenSpecProject | null>(null);
   const [selectedChangeId, setSelectedChangeId] = useState<string | null>(null);
   const [cursorPositions, setCursorPositions] = useState<Record<string, number>>({});
@@ -75,6 +77,10 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     setSkillCategory('all');
     setSkillPage(1);
     setSkillSearch('');
+    setSelectSkillSearch('');
+    setSelectSkillPage(1);
+    setSelectHookSearch('');
+    setSelectHookPage(1);
     setSelectedChangeId(null);
   }, []);
 
@@ -784,7 +790,11 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
 
   // Skill Select - Skills in Category
   if (view === 'skill-select-category' && selectedTaskId) {
-    const skills = globalLibrary.listSkillsByCategory(skillCategory, selectSkillSearch || undefined);
+    const result = globalLibrary.listSkillsByCategory(skillCategory, {
+      search: selectSkillSearch || undefined,
+      page: selectSkillPage,
+      pageSize: 8,
+    });
     const task = store.getTask(selectedTaskId);
     const linkedSkillIds = task?.skills.map((s) => s.skill) || [];
 
@@ -799,7 +809,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
 
         <ListBox
           key={`skill-select-category-${refreshKey}`}
-          items={skills
+          items={result.skills
             .filter((s) => !linkedSkillIds.includes(s.id))
             .map((s) => ({
               id: s.id,
@@ -816,10 +826,20 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
                 setView('task-detail');
               },
             }))}
-          onBack={() => setView('skill-select')}
+          onBack={() => {
+            setSelectSkillPage(1);
+            setView('skill-select');
+          }}
+          onNextPage={() => setSelectSkillPage((p) => Math.min(result.totalPages, p + 1))}
+          onPrevPage={() => setSelectSkillPage((p) => Math.max(1, p - 1))}
         />
 
-        <Box marginTop={1}>
+        <Box marginTop={1} flexDirection="column">
+          {result.totalPages > 1 && (
+            <Text dimColor>
+              Page {result.page}/{result.totalPages} ({result.total} skills) [n/p] page
+            </Text>
+          )}
           <Text dimColor>[b] Back to categories</Text>
         </Box>
       </Box>
@@ -919,16 +939,13 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
 
   // Hook Select - Hooks in Type
   if (view === 'hook-select-type' && selectedTaskId) {
-    const hooksByType = globalLibrary.listHooksByType();
-    const hooks = hooksByType[selectedHookType] || [];
+    const result = globalLibrary.listHooksByTypePaginated(selectedHookType, {
+      search: selectHookSearch || undefined,
+      page: selectHookPage,
+      pageSize: 8,
+    });
     const task = store.getTask(selectedTaskId);
     const linkedHookIds = Object.values(task?.hooks || {}).flat();
-    const filteredHooks = selectHookSearch
-      ? hooks.filter((h) =>
-          h.name.toLowerCase().includes(selectHookSearch.toLowerCase()) ||
-          h.description?.toLowerCase().includes(selectHookSearch.toLowerCase())
-        )
-      : hooks;
 
     return (
       <Box key="hook-select-type" flexDirection="column" flexGrow={1}>
@@ -941,7 +958,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
 
         <ListBox
           key={`hook-select-type-${refreshKey}`}
-          items={filteredHooks
+          items={result.hooks
             .filter((h) => !linkedHookIds.includes(h.id))
             .map((h) => ({
               id: h.id,
@@ -961,10 +978,20 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
                 setView('task-detail');
               },
             }))}
-          onBack={() => setView('hook-select')}
+          onBack={() => {
+            setSelectHookPage(1);
+            setView('hook-select');
+          }}
+          onNextPage={() => setSelectHookPage((p) => Math.min(result.totalPages, p + 1))}
+          onPrevPage={() => setSelectHookPage((p) => Math.max(1, p - 1))}
         />
 
-        <Box marginTop={1}>
+        <Box marginTop={1} flexDirection="column">
+          {result.totalPages > 1 && (
+            <Text dimColor>
+              Page {result.page}/{result.totalPages} ({result.total} hooks) [n/p] page
+            </Text>
+          )}
           <Text dimColor>[b] Back to types</Text>
         </Box>
       </Box>

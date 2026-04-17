@@ -406,19 +406,97 @@ export class GlobalLibraryStore {
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  listSkillsByCategory(category: string, search?: string): GlobalSkill[] {
-    const skills = this.listSkills();
-    let filtered = category === 'all' ? skills : skills.filter((s) => s.category === category);
+  listSkillsByCategory(
+    category: string,
+    options?: {
+      search?: string;
+      page?: number;
+      pageSize?: number;
+    }
+  ): {
+    skills: GlobalSkill[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  } {
+    const pageSize = options?.pageSize || 10;
+    const page = options?.page || 1;
+    let skills = this.listSkills();
 
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filtered = filtered.filter(
+    // Filter by category
+    if (category && category !== 'all') {
+      skills = skills.filter((s) => s.category === category);
+    }
+
+    // Filter by search query
+    if (options?.search) {
+      const query = options.search.toLowerCase();
+      skills = skills.filter(
         (s) =>
-          s.name.toLowerCase().includes(searchLower) ||
-          s.description?.toLowerCase().includes(searchLower)
+          s.name.toLowerCase().includes(query) ||
+          s.description?.toLowerCase().includes(query)
       );
     }
 
-    return filtered;
+    const total = skills.length;
+    const totalPages = Math.ceil(total / pageSize);
+    const start = (page - 1) * pageSize;
+    const paginatedSkills = skills.slice(start, start + pageSize);
+
+    return {
+      skills: paginatedSkills,
+      total,
+      page,
+      pageSize,
+      totalPages,
+    };
+  }
+
+  listHooksByTypePaginated(
+    type?: string,
+    options?: {
+      search?: string;
+      page?: number;
+      pageSize?: number;
+    }
+  ): {
+    hooks: GlobalHook[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  } {
+    const pageSize = options?.pageSize || 10;
+    const page = options?.page || 1;
+    let hooks = this.listHooks();
+
+    // Filter by type
+    if (type && type !== 'all') {
+      hooks = hooks.filter((h) => h.type === type);
+    }
+
+    // Filter by search query
+    if (options?.search) {
+      const query = options.search.toLowerCase();
+      hooks = hooks.filter(
+        (h) =>
+          h.name.toLowerCase().includes(query) ||
+          h.description?.toLowerCase().includes(query)
+      );
+    }
+
+    const total = hooks.length;
+    const totalPages = Math.ceil(total / pageSize);
+    const start = (page - 1) * pageSize;
+    const paginatedHooks = hooks.slice(start, start + pageSize);
+
+    return {
+      hooks: paginatedHooks,
+      total,
+      page,
+      pageSize,
+      totalPages,
+    };
   }
 }

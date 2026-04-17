@@ -377,15 +377,32 @@ scaffold:
 # Cat Skill 2
 `);
 
-      const frontendSkills = store.listSkillsByCategory('frontend');
-      expect(frontendSkills.length).toBe(1);
-      expect(frontendSkills[0]?.id).toBe('cat-skill1');
+      const result = store.listSkillsByCategory('frontend');
+      expect(result.skills.length).toBe(1);
+      expect(result.skills[0]?.id).toBe('cat-skill1');
+      expect(result.total).toBe(1);
     });
 
     it('returns all skills when category is "all"', () => {
       const store = new GlobalLibraryStore();
-      const allSkills = store.listSkillsByCategory('all');
-      expect(Array.isArray(allSkills)).toBe(true);
+
+      // Create some skills first
+      const skill1Dir = join(store.getGlobalPath(), 'skills', 'test-skill1');
+      const skill2Dir = join(store.getGlobalPath(), 'skills', 'test-skill2');
+      mkdirSync(skill1Dir, { recursive: true });
+      mkdirSync(skill2Dir, { recursive: true });
+
+      writeFileSync(join(skill1Dir, 'SKILL.md'), `# Test Skill 1
+description: A test skill
+`);
+      writeFileSync(join(skill2Dir, 'SKILL.md'), `# Test Skill 2
+description: Another test skill
+`);
+
+      const result = store.listSkillsByCategory('all');
+      expect(Array.isArray(result.skills)).toBe(true);
+      expect(result.total).toBe(2);
+      expect(result.totalPages).toBe(1);
     });
   });
 });
