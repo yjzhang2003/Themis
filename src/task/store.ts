@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rmSync
 import { join } from 'path';
 import YAML from 'yaml';
 import { Task, WorkspaceConfig, TaskSchema, WorkspaceConfigSchema } from './types.js';
+import { TmuxManager } from '../supervisor/tmux.js';
 
 const WORKSPACE_CONFIG_NAME = 'harness.yaml';
 
@@ -126,8 +127,13 @@ export class TaskStore {
     const taskFile = this.getTaskFilePath(task.id);
     const taskData = { ...task };
     delete (taskData as Record<string, unknown>).directory;
-    const yaml = YAML.stringify(taskData);
-    writeFileSync(taskFile, yaml, 'utf-8');
+    try {
+      const yaml = YAML.stringify(taskData);
+      writeFileSync(taskFile, yaml, 'utf-8');
+    } catch (e) {
+      console.error(`[TaskStore] Failed to save task ${task.id}:`, e instanceof Error ? e.message : e);
+      throw new Error(`Failed to save task ${task.id}: ${e instanceof Error ? e.message : e}`);
+    }
   }
 
   updateTask(taskId: string, updates: Partial<Task>): Task | null {
@@ -148,6 +154,13 @@ export class TaskStore {
   deleteTask(taskId: string): boolean {
     const task = this.getTask(taskId);
     if (!task) return false;
+
+    // Kill associated tmux session if exists
+    if (task.session?.tmux_session) {
+      const tmux = new TmuxManager();
+      tmux.killSession(task.session.tmux_session);
+    }
+
     rmSync(this.getTaskDir(taskId), { recursive: true, force: true });
     return true;
   }

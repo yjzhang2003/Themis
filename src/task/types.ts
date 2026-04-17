@@ -17,7 +17,11 @@ export const TaskSkillSchema = z.object({
 });
 export type TaskSkill = z.infer<typeof TaskSkillSchema>;
 
-export const TaskHooksSchema = z.record(z.string(), z.array(z.string()));
+// Hook key must be valid hook type, value is array of hook IDs
+export const TaskHooksSchema = z.record(
+  z.enum(['PreToolUse', 'PostToolUse', 'Stop', 'SessionStart', 'SessionEnd', 'PreCompact']),
+  z.array(z.string().regex(/^[a-zA-Z0-9_-]+$/, 'Invalid hook ID format'))
+);
 export type TaskHooks = z.infer<typeof TaskHooksSchema>;
 
 // Phase 5: Attached resource schema

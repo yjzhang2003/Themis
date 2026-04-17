@@ -1,6 +1,24 @@
 import { execSync, exec } from 'child_process';
 import { TmuxSession } from './types.js';
 
+// Validate identifiers to prevent shell injection
+const SAFE_SESSION_NAME_REGEX = /^[a-zA-Z0-9_-]+$/;
+const SAFE_PATH_REGEX = /^[\w\-\/.]+$/;
+
+function validateSessionName(name: string): string {
+  if (!SAFE_SESSION_NAME_REGEX.test(name)) {
+    throw new Error(`Invalid session name: ${name}. Only alphanumeric, underscore, hyphen allowed.`);
+  }
+  return name;
+}
+
+function validatePath(path: string): string {
+  if (!SAFE_PATH_REGEX.test(path)) {
+    throw new Error(`Invalid path: ${path}`);
+  }
+  return path;
+}
+
 export class TmuxManager {
   /**
    * List all tmux sessions matching a pattern
@@ -36,26 +54,33 @@ export class TmuxManager {
    * Create a new session for a task
    */
   createTaskSession(taskId: string, workingDir: string, env: Record<string, string>): TmuxSession {
-    const sessionName = `th-task-${taskId}`;
+    const sessionName = `th-task-${validateSessionName(taskId)}`;
+    const safeWorkingDir = validatePath(workingDir);
 
-    // Build environment string for tmux
+    // Build environment string for tmux - validate env var names
     const envEntries = Object.entries(env)
-      .map(([k, v]) => `${k}="${v}"`)
+      .filter(([k]) => SAFE_SESSION_NAME_REGEX.test(k))
+      .map(([k, v]) => `${k}="${v.replace(/"/g, '\\"')}"`)
       .join(' ');
 
     // Create session with environment
     try {
       execSync(
-        `tmux new-session -d -s "${sessionName}" -c "${workingDir}"`,
+        `tmux new-session -d -s "${sessionName}" -c "${safeWorkingDir}"`,
         { stdio: 'ignore' }
       );
 
       // Set environment variables in the session
       if (envEntries) {
-        execSync(
-          `tmux set-environment -t "${sessionName}" ${envEntries}`,
-          { stdio: 'ignore' }
-        );
+        try {
+          execSync(
+            `tmux set-environment -t "${sessionName}" ${envEntries}`,
+            { stdio: 'ignore' }
+          );
+        } catch (envError) {
+          // Env setup failed but session exists - log warning
+          console.error(`[TmuxManager] Failed to set environment variables: ${envError}`);
+        }
       }
     } catch (e) {
       // Session might already exist
@@ -77,9 +102,10 @@ export class TmuxManager {
    * Get a specific session by name
    */
   getSession(sessionName: string): TmuxSession | null {
+    const safeSession = validateSessionName(sessionName);
     try {
       const output = execSync(
-        `tmux list-sessions -F "#{session_name}|#{session_windows}|#{session_created_string}|#{session_attached}" -t "${sessionName}"`,
+        `tmux list-sessions -F "#{session_name}|#{session_windows}|#{session_created_string}|#{session_attached}" -t "${safeSession}"`,
         { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
       );
 
@@ -99,9 +125,10 @@ export class TmuxManager {
    * Send keys to a session
    */
   sendKeys(sessionName: string, keys: string): void {
-    // Escape special characters
-    const escaped = keys.replace(/'/g, "'\\''");
-    execSync(`tmux send-keys -t "${sessionName}" '${escaped}' C-m`, {
+    const safeSession = validateSessionName(sessionName);
+    // Escape special characters for bash
+    const escaped = keys.replace(/'/g, "'\\''").replace(/\$/g, '\\$').replace(/`/g, '\\`');
+    execSync(`tmux send-keys -t "${safeSession}" '${escaped}' C-m`, {
       stdio: 'ignore',
     });
   }
@@ -110,8 +137,9 @@ export class TmuxManager {
    * Send raw keys without Enter
    */
   sendRawKeys(sessionName: string, keys: string): void {
-    const escaped = keys.replace(/'/g, "'\\''");
-    execSync(`tmux send-keys -t "${sessionName}" '${escaped}'`, {
+    const safeSession = validateSessionName(sessionName);
+    const escaped = keys.replace(/'/g, "'\\''").replace(/\$/g, '\\$').replace(/`/g, '\\`');
+    execSync(`tmux send-keys -t "${safeSession}" '${escaped}'`, {
       stdio: 'ignore',
     });
   }
@@ -121,15 +149,17 @@ export class TmuxManager {
    * Note: This will hijack the terminal
    */
   attachSession(sessionName: string): void {
-    execSync(`tmux attach-session -t "${sessionName}"`, { stdio: 'inherit' });
+    const safeSession = validateSessionName(sessionName);
+    execSync(`tmux attach-session -t "${safeSession}"`, { stdio: 'inherit' });
   }
 
   /**
    * Check if session exists
    */
   sessionExists(sessionName: string): boolean {
+    const safeSession = validateSessionName(sessionName);
     try {
-      execSync(`tmux has-session -t "${sessionName}"`, { stdio: 'ignore' });
+      execSync(`tmux has-session -t "${safeSession}"`, { stdio: 'ignore' });
       return true;
     } catch {
       return false;
@@ -139,11 +169,13 @@ export class TmuxManager {
   /**
    * Kill a session
    */
-  killSession(sessionName: string): void {
+  killSession(sessionName: string): boolean {
+    const safeSession = validateSessionName(sessionName);
     try {
-      execSync(`tmux kill-session -t "${sessionName}"`, { stdio: 'ignore' });
+      execSync(`tmux kill-session -t "${safeSession}"`, { stdio: 'ignore' });
+      return true;
     } catch {
-      // Ignore errors
+      return false;
     }
   }
 
@@ -151,8 +183,10 @@ export class TmuxManager {
    * Capture session pane contents (for logs)
    */
   capturePane(sessionName: string, pane: string = '0'): string {
+    const safeSession = validateSessionName(sessionName);
+    const safePane = pane.replace(/[^0-9]/g, '');
     try {
-      return execSync(`tmux capture-pane -t "${sessionName}:${pane}" -p`, {
+      return execSync(`tmux capture-pane -t "${safeSession}:${safePane}" -p`, {
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],
       });
@@ -165,9 +199,10 @@ export class TmuxManager {
    * Get list of panes in a session
    */
   listPanes(sessionName: string): string[] {
+    const safeSession = validateSessionName(sessionName);
     try {
       const output = execSync(
-        `tmux list-panes -t "${sessionName}" -F "#{pane_index}"`,
+        `tmux list-panes -t "${safeSession}" -F "#{pane_index}"`,
         { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
       );
       return output.trim().split('\n').filter(p => p);
@@ -179,11 +214,13 @@ export class TmuxManager {
   /**
    * Detach all clients from a session
    */
-  detachSession(sessionName: string): void {
+  detachSession(sessionName: string): boolean {
+    const safeSession = validateSessionName(sessionName);
     try {
-      execSync(`tmux detach-session -t "${sessionName}"`, { stdio: 'ignore' });
+      execSync(`tmux detach-session -t "${safeSession}"`, { stdio: 'ignore' });
+      return true;
     } catch {
-      // Ignore
+      return false;
     }
   }
 
@@ -191,9 +228,10 @@ export class TmuxManager {
    * Get session PID (if available)
    */
   getSessionPid(sessionName: string): number | null {
+    const safeSession = validateSessionName(sessionName);
     try {
       const output = execSync(
-        `tmux display-message -p -t "${sessionName}" "#{session_pid}"`,
+        `tmux display-message -p -t "${safeSession}" "#{session_pid}"`,
         { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
       );
       return parseInt(output.trim(), 10) || null;

@@ -71,9 +71,14 @@ Commands:
         const logPath = config.getLogPath();
         if (existsSync(logPath)) {
           const tail = cmdArgs[2] === '--tail' ? parseInt(cmdArgs[3] as string, 10) || 50 : 50;
-          const content = readFileSync(logPath, 'utf-8');
-          const lines = content.split('\n').slice(-tail);
-          setOutput(`Supervisor Logs (last ${tail} lines):\n\n${lines.join('\n')}`);
+          // Use tail command to avoid loading entire file
+          try {
+            const { execSync: execSyncLocal } = require('child_process');
+            const content = execSyncLocal(`tail -n ${tail} "${logPath}"`, { encoding: 'utf-8', maxBuffer: 1024 * 1024 });
+            setOutput(`Supervisor Logs (last ${tail} lines):\n\n${content}`);
+          } catch {
+            setOutput('Failed to read logs (file may be too large)');
+          }
         } else {
           setOutput('No supervisor logs found');
         }
