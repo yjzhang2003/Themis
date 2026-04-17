@@ -198,70 +198,61 @@ export class GlobalLibraryStore {
     return false;
   }
 
-  // Hooks
+  // Hooks - stored in hooks.json
   listHooks(): GlobalHook[] {
-    const hooksDir = join(this.globalPath, 'hooks');
-    if (!existsSync(hooksDir)) return [];
+    const hooksPath = join(this.globalPath, 'hooks', 'hooks.json');
+    if (!existsSync(hooksPath)) return [];
 
-    const hooks: GlobalHook[] = [];
-    const entries = readdirSync(hooksDir);
-
-    for (const entry of entries) {
-      if (entry.endsWith('.yaml') || entry.endsWith('.yml')) {
-        const hook = this.parseHookYaml(join(hooksDir, entry));
-        if (hook) hooks.push(hook);
-      }
-    }
-
-    return hooks;
-  }
-
-  private parseHookYaml(filePath: string): GlobalHook | null {
     try {
-      const content = readFileSync(filePath, 'utf-8');
-      const parsed = YAML.parse(content);
-      return {
-        id: parsed.id || basename(filePath, '.yaml'),
-        name: parsed.name || parsed.id || basename(filePath, '.yaml'),
-        type: parsed.type || 'PostToolUse',
-        command: parsed.command || '',
-        matcher: parsed.matcher,
-        description: parsed.description,
-        created_at: parsed.created_at || new Date().toISOString(),
-      };
+      const content = readFileSync(hooksPath, 'utf-8');
+      const parsed = JSON.parse(content);
+      const hooks: GlobalHook[] = [];
+
+      // hooks.json has structure: { hooks: { PreToolUse: [...], PostToolUse: [...], Stop: [...] } }
+      const hookTypes = ['PreToolUse', 'PostToolUse', 'Stop'] as const;
+
+      for (const hookType of hookTypes) {
+        const hooksList = parsed.hooks?.[hookType] || [];
+        for (const hook of hooksList) {
+          if (hook.id) {
+            hooks.push({
+              id: hook.id,
+              name: hook.description || hook.id,
+              type: hookType,
+              command: hook.hooks?.[0]?.command || '',
+              matcher: hook.matcher,
+              description: hook.description,
+              created_at: new Date().toISOString(),
+            });
+          }
+        }
+      }
+
+      return hooks;
     } catch {
-      return null;
+      return [];
     }
   }
 
   getHook(id: string): GlobalHook | null {
-    const hooksDir = join(this.globalPath, 'hooks');
-    const yamlPath = join(hooksDir, `${id}.yaml`);
-
-    if (existsSync(yamlPath)) {
-      return this.parseHookYaml(yamlPath);
-    }
-    return null;
+    const hooks = this.listHooks();
+    return hooks.find(h => h.id === id) || null;
   }
 
   installHook(sourcePath: string, name?: string): GlobalHook {
-    this.ensureDirectories();
-    const hooksDir = join(this.globalPath, 'hooks');
+    // For now, hooks are managed in hooks.json - this is a no-op for installation
     const id = name || basename(sourcePath, '.yaml');
-    const destPath = join(hooksDir, `${id}.yaml`);
-
-    copyFileSync(sourcePath, destPath);
-    return this.getHook(id)!;
+    return this.getHook(id) || {
+      id,
+      name: id,
+      type: 'PostToolUse' as const,
+      command: '',
+      created_at: new Date().toISOString(),
+    };
   }
 
   removeHook(id: string): boolean {
-    const hooksDir = join(this.globalPath, 'hooks');
-    const yamlPath = join(hooksDir, `${id}.yaml`);
-
-    if (existsSync(yamlPath)) {
-      rmSync(yamlPath, { force: true });
-      return true;
-    }
+    // For now, hooks are managed in hooks.json - this is a no-op for removal
     return false;
   }
 

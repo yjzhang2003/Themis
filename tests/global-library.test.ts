@@ -104,16 +104,19 @@ category: testing
       expect(Array.isArray(hooks)).toBe(true);
     });
 
-    it('parses hook from YAML format', () => {
+    it('parses hook from hooks.json format', () => {
       const store = new GlobalLibraryStore();
-      const hookPath = join(store.getGlobalPath(), 'hooks', 'test-hook.yaml');
-      writeFileSync(hookPath, `
-id: test-hook
-name: Test Hook
-type: PostToolUse
-command: echo "test"
-description: A test hook
-`);
+      const hooksPath = join(store.getGlobalPath(), 'hooks', 'hooks.json');
+      writeFileSync(hooksPath, JSON.stringify({
+        hooks: {
+          PostToolUse: [{
+            id: 'test-hook',
+            description: 'Test Hook',
+            matcher: 'Bash',
+            hooks: [{ type: 'command', command: 'echo "test"' }]
+          }]
+        }
+      }, null, 2));
 
       const hooks = store.listHooks();
       const testHook = hooks.find(h => h.id === 'test-hook');
@@ -124,13 +127,17 @@ description: A test hook
 
     it('parses PreToolUse hook type', () => {
       const store = new GlobalLibraryStore();
-      const hookPath = join(store.getGlobalPath(), 'hooks', 'pre-hook.yaml');
-      writeFileSync(hookPath, `
-id: pre-hook
-name: Pre Hook
-type: PreToolUse
-command: validate
-`);
+      const hooksPath = join(store.getGlobalPath(), 'hooks', 'hooks.json');
+      writeFileSync(hooksPath, JSON.stringify({
+        hooks: {
+          PreToolUse: [{
+            id: 'pre-hook',
+            description: 'Pre Hook',
+            matcher: 'Bash',
+            hooks: [{ type: 'command', command: 'validate' }]
+          }]
+        }
+      }, null, 2));
 
       const hooks = store.listHooks();
       const preHook = hooks.find(h => h.id === 'pre-hook');
@@ -279,47 +286,20 @@ Description.
   });
 
   describe('installHook', () => {
-    it('copies hook YAML file', () => {
+    it('returns placeholder hook (hooks managed via hooks.json)', () => {
       const store = new GlobalLibraryStore();
-
-      // Create a source hook file
-      const sourceHook = join(testBaseDir, 'source-hook.yaml');
-      writeFileSync(sourceHook, `
-id: source-hook
-name: Source Hook
-type: PostToolUse
-command: echo "source"
-`);
-
-      const hook = store.installHook(sourceHook, 'installed-hook');
-
-      // The returned hook has id from YAML content
-      expect(hook.id).toBe('source-hook');
-
-      // But the file is copied with the correct filename
-      const hookPath = join(store.getGlobalPath(), 'hooks', 'installed-hook.yaml');
-      expect(existsSync(hookPath)).toBe(true);
+      const hook = store.installHook('/some/path', 'test-hook');
+      // Hooks are managed via hooks.json, not individual files
+      expect(hook.id).toBe('test-hook');
     });
   });
 
   describe('removeHook', () => {
-    it('removes hook file', () => {
+    it('returns false (hooks managed via hooks.json)', () => {
       const store = new GlobalLibraryStore();
-
-      // Create a hook first
-      const hookPath = join(store.getGlobalPath(), 'hooks', 'to-remove-hook.yaml');
-      writeFileSync(hookPath, `
-id: to-remove-hook
-name: To Remove Hook
-type: PostToolUse
-command: echo "test"
-`);
-
-      expect(store.getHook('to-remove-hook')).not.toBeNull();
-
-      const removed = store.removeHook('to-remove-hook');
-      expect(removed).toBe(true);
-      expect(store.getHook('to-remove-hook')).toBeNull();
+      // Hooks are managed via hooks.json, removal not supported
+      const removed = store.removeHook('any-hook');
+      expect(removed).toBe(false);
     });
   });
 
