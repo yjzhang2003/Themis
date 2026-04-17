@@ -37,81 +37,74 @@ export function ListBox({
     setSelectedIndex(initialIndex);
   }, [items, initialIndex]);
 
-  // Handle keyboard input via readline-like interface
+  // Handle keyboard navigation
   useEffect(() => {
-    if (typeof process.stdin.on === 'function') {
-      const handleKeypress = (s: string | Buffer) => {
-        const data = typeof s === 'string' ? s : s.toString();
+    let cancelled = false;
 
-        if (data === '\u0003') {
-          // Ctrl+C
-          return;
-        }
+    const handleKeypress = (s: string | Buffer) => {
+      if (cancelled) return;
 
-        // Escape - go back
-        if (data === '\u001b' || data === '\u001b[D') {
-          if (onBack) onBack();
-          return;
-        }
+      const data = typeof s === 'string' ? s : s.toString();
 
-        // Arrow Up or k
-        if (data === '\u001b[A' || data === 'k') {
-          setSelectedIndex((prev) => Math.max(0, prev - 1));
-          return;
-        }
+      if (data === '\u0003') return; // Ctrl+C
 
-        // Arrow Down or j
-        if (data === '\u001b[B' || data === 'j') {
-          setSelectedIndex((prev) => Math.min(items.length - 1, prev + 1));
-          return;
-        }
-
-        // Arrow Left or n - prev page
-        if (data === '\u001b[D' || data === 'n') {
-          if (onPrevPage) onPrevPage();
-          return;
-        }
-
-        // Arrow Right or l - next page
-        if (data === '\u001b[C' || data === 'l') {
-          if (onNextPage) onNextPage();
-          return;
-        }
-
-        // Space - toggle multi-select
-        if (data === ' ') {
-          if (multiSelect && items[selectedIndex] && onToggleSelect) {
-            onToggleSelect(items[selectedIndex].id);
-            setSelectedIndex((prev) => Math.min(items.length - 1, prev + 1));
-          }
-          return;
-        }
-
-        // Enter - select
-        if (data === '\r' || data === '\n') {
-          if (items[selectedIndex]) {
-            items[selectedIndex].onSelect();
-          }
-          return;
-        }
-      };
-
-      try {
-        process.stdin.setRawMode?.(true);
-        process.stdin.on?.('keypress', handleKeypress);
-      } catch {
-        // stdin not available
+      // Escape - go back
+      if (data === '\u001b') {
+        if (onBack) onBack();
+        return;
       }
 
-      return () => {
-        try {
-          process.stdin.removeListener?.('keypress', handleKeypress);
-          process.stdin.setRawMode?.(false);
-        } catch {
-          // ignore
+      // Arrow Up
+      if (data === '\u001b[A' || data === 'k') {
+        setSelectedIndex((prev) => Math.max(0, prev - 1));
+        return;
+      }
+
+      // Arrow Down
+      if (data === '\u001b[B' || data === 'j') {
+        setSelectedIndex((prev) => Math.min(items.length - 1, prev + 1));
+        return;
+      }
+
+      // Arrow Left - prev page
+      if (data === '\u001b[D' || data === 'n') {
+        if (onPrevPage) onPrevPage();
+        return;
+      }
+
+      // Arrow Right - next page
+      if (data === '\u001b[C' || data === 'l') {
+        if (onNextPage) onNextPage();
+        return;
+      }
+
+      // Space - toggle select
+      if (data === ' ') {
+        if (multiSelect && items[selectedIndex] && onToggleSelect) {
+          onToggleSelect(items[selectedIndex].id);
         }
-      };
+        return;
+      }
+
+      // Enter
+      if (data === '\r' || data === '\n') {
+        if (items[selectedIndex]) {
+          items[selectedIndex].onSelect();
+        }
+        return;
+      }
+    };
+
+    if (process.stdin.on) {
+      process.stdin.on('keypress', handleKeypress);
     }
+
+    return () => {
+      cancelled = true;
+      if (process.stdin.off) {
+        process.stdin.off('keypress', handleKeypress);
+      }
+    };
   }, [items, selectedIndex, onBack, onNextPage, onPrevPage, multiSelect, onToggleSelect]);
 
   if (items.length === 0) {
