@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Text } from 'ink';
 
 export interface SelectableItem {
@@ -15,51 +15,100 @@ export interface ListBoxProps {
   onBack?: () => void;
   onNextPage?: () => void;
   onPrevPage?: () => void;
+  multiSelect?: boolean;
+  selectedIds?: string[];
+  onToggleSelect?: (id: string) => void;
 }
 
-export function ListBox({ items, initialIndex = 0, onIndexChange, onBack, onNextPage, onPrevPage }: ListBoxProps) {
+export function ListBox({
+  items,
+  initialIndex = 0,
+  onIndexChange,
+  onBack,
+  onNextPage,
+  onPrevPage,
+  multiSelect = false,
+  selectedIds = [],
+  onToggleSelect,
+}: ListBoxProps) {
   const [selectedIndex, setSelectedIndex] = useState(initialIndex);
 
   useEffect(() => {
     setSelectedIndex(initialIndex);
   }, [items, initialIndex]);
 
+  const handleToggleSelect = useCallback(
+    (id: string) => {
+      if (onToggleSelect && multiSelect) {
+        onToggleSelect(id);
+        // Move to next item after selection
+        setSelectedIndex((prev) => Math.min(items.length - 1, prev + 1));
+      }
+    },
+    [onToggleSelect, multiSelect, items.length]
+  );
+
   useEffect(() => {
     const handleData = (s: string | Buffer) => {
       const data = typeof s === 'string' ? s : s.toString();
       const key = data.trim();
+      const rawKey = data;
+
       if (s === '\u0003') {
-        // Ctrl+C
+        // Ctrl+C - always exit
         return;
       }
-      // Escape or Left arrow or h - go back
-      if (key === '\u001b[D' || key === 'h' || key === '\u001b') {
+
+      // Escape - go back
+      if (key === '\u001b' || key === '\u001b') {
         if (onBack) {
           onBack();
         }
         return;
       }
+
+      // Arrow Up or k - move up
       if (key === '\u001b[A' || key === 'k') {
-        // Up
         setSelectedIndex((prev) => Math.max(0, prev - 1));
-      } else if (key === '\u001b[B' || key === 'j') {
-        // Down
+        return;
+      }
+
+      // Arrow Down or j - move down
+      if (key === '\u001b[B' || key === 'j') {
         setSelectedIndex((prev) => Math.min(items.length - 1, prev + 1));
-      } else if (key === '\r' || key === '\n' || key === 'l' || key === '\u001b[C') {
-        // Enter or right
-        if (items[selectedIndex]) {
-          items[selectedIndex].onSelect();
-        }
-      } else if (key === 'n') {
-        // n - next page
-        if (onNextPage) {
-          onNextPage();
-        }
-      } else if (key === 'p') {
-        // p - prev page
+        return;
+      }
+
+      // Arrow Left or n - previous page
+      if (rawKey === '\u001b[D' || key === 'n') {
         if (onPrevPage) {
           onPrevPage();
         }
+        return;
+      }
+
+      // Arrow Right or l - next page
+      if (rawKey === '\u001b[C' || key === 'l') {
+        if (onNextPage) {
+          onNextPage();
+        }
+        return;
+      }
+
+      // Space - toggle selection (multi-select mode)
+      if (key === ' ') {
+        if (multiSelect && items[selectedIndex]) {
+          handleToggleSelect(items[selectedIndex].id);
+        }
+        return;
+      }
+
+      // Enter - confirm selection
+      if (key === '\r' || key === '\n') {
+        if (items[selectedIndex]) {
+          items[selectedIndex].onSelect();
+        }
+        return;
       }
     };
 
@@ -78,7 +127,7 @@ export function ListBox({ items, initialIndex = 0, onIndexChange, onBack, onNext
         // Ignore
       }
     };
-  }, [items, selectedIndex, onBack, onNextPage, onPrevPage]);
+  }, [items, selectedIndex, onBack, onNextPage, onPrevPage, multiSelect, handleToggleSelect]);
 
   if (items.length === 0) {
     return (
@@ -92,6 +141,7 @@ export function ListBox({ items, initialIndex = 0, onIndexChange, onBack, onNext
     <Box flexDirection="column">
       {items.map((item, index) => {
         const isSelected = index === selectedIndex;
+        const isMultiSelected = selectedIds.includes(item.id);
         // Truncate description to max width (terminal width minus prefix and padding)
         const maxDescWidth = 60;
         const descText = item.description?.split('\n')[0] || '';
@@ -108,14 +158,14 @@ export function ListBox({ items, initialIndex = 0, onIndexChange, onBack, onNext
               setTimeout(() => item.onSelect(), 50);
             }}
           >
-            <Box width={2}>
+            <Box width={3}>
               <Text color={isSelected ? 'cyan' : undefined}>
-                {isSelected ? '▶' : ' '}
+                {isMultiSelected ? '◉ ' : isSelected ? '▶ ' : '  '}
               </Text>
             </Box>
             <Box flexDirection="column" flexGrow={1}>
               <Text color={isSelected ? 'cyan' : undefined} bold={isSelected}>
-                • {item.label}
+                {item.label}
               </Text>
               {truncatedDesc && (
                 <Text dimColor>{truncatedDesc}</Text>
