@@ -48,10 +48,10 @@ export function CLIProvider({ children }: CLIProviderProps) {
 
   // Initialize stores synchronously
   const store = useMemo(() => {
-    const taskStore = new TaskStore(workspaceRoot);
+    const taskStore = new TaskStore();
     taskStore.ensureDirectories();
     return taskStore;
-  }, [workspaceRoot]);
+  }, []);
 
   const library = useMemo(() => {
     const libStore = new LibraryStore(workspaceRoot);

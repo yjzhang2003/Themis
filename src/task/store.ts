@@ -1,216 +1,154 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rmSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
-import YAML from 'yaml';
-import { Task, WorkspaceConfig, TaskSchema, WorkspaceConfigSchema } from './types.js';
-import { TmuxManager } from '../supervisor/tmux.js';
+import { homedir } from 'os';
+import { Task, TasksIndexSchema } from './types.js';
 
-const WORKSPACE_CONFIG_NAME = 'harness.yaml';
+const MAIN_DIR = '.tharness';
+const TASKS_FILE = 'tasks.json';
+const TASK_MARKER = '.tharness';
+
+function getMainPath(): string {
+  return join(homedir(), MAIN_DIR);
+}
+
+function getTasksFilePath(): string {
+  return join(getMainPath(), TASKS_FILE);
+}
+
+function getTaskMarkerPath(taskPath: string): string {
+  return join(taskPath, TASK_MARKER);
+}
 
 export class TaskStore {
-  private workspaceRoot: string;
-  private config: WorkspaceConfig;
+  private index: TasksIndexSchema;
 
-  constructor(workspaceRoot: string) {
-    this.workspaceRoot = workspaceRoot;
-    this.config = this.loadConfig();
+  constructor() {
+    this.index = this.loadIndex();
   }
 
-  private loadConfig(): WorkspaceConfig {
-    const configPath = join(this.workspaceRoot, WORKSPACE_CONFIG_NAME);
-    if (existsSync(configPath)) {
+  private loadIndex(): TasksIndexSchema {
+    const path = getTasksFilePath();
+    if (existsSync(path)) {
       try {
-        const content = readFileSync(configPath, 'utf-8');
-        const parsed = YAML.parse(content);
-        return WorkspaceConfigSchema.parse({ ...parsed, workspace_root: this.workspaceRoot });
+        const content = readFileSync(path, 'utf-8');
+        return TasksIndexSchema.parse(JSON.parse(content));
       } catch (e) {
-        console.error(`[TaskStore] Failed to parse ${configPath}:`, e instanceof Error ? e.message : e);
+        console.error(`[TaskStore] Failed to parse ${path}:`, e instanceof Error ? e.message : e);
       }
     }
-    return this.createDefaultConfig();
+    return { version: '1.0', tasks: [] };
   }
 
-  private createDefaultConfig(): WorkspaceConfig {
-    const config: WorkspaceConfig = {
-      version: '1.0',
-      workspace_root: this.workspaceRoot,
-      library_path: './library',
-      tasks_path: './tasks',
-      open_spec_path: undefined,
-      active_task: undefined,
-    };
-    this.saveConfig(config);
-    return config;
-  }
-
-  private saveConfig(config: WorkspaceConfig): void {
-    const configPath = join(this.workspaceRoot, WORKSPACE_CONFIG_NAME);
-    const yaml = YAML.stringify(config);
-    writeFileSync(configPath, yaml, 'utf-8');
-  }
-
-  private getTasksPath(): string {
-    return join(this.workspaceRoot, this.config.tasks_path);
-  }
-
-  private getTaskDir(taskId: string): string {
-    return join(this.getTasksPath(), taskId);
-  }
-
-  private getTaskFilePath(taskId: string): string {
-    return join(this.getTaskDir(taskId), 'task.yaml');
-  }
-
-  private getTaskClaudeDir(taskId: string): string {
-    return join(this.getTaskDir(taskId), '.claude');
+  private saveIndex(): void {
+    const path = getTasksFilePath();
+    const dir = getMainPath();
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path, JSON.stringify(this.index, null, 2), 'utf-8');
   }
 
   ensureDirectories(): void {
-    mkdirSync(this.getTasksPath(), { recursive: true });
-    mkdirSync(join(this.workspaceRoot, this.config.library_path), { recursive: true });
-    mkdirSync(join(this.workspaceRoot, this.config.library_path, 'skills'), { recursive: true });
-    mkdirSync(join(this.workspaceRoot, this.config.library_path, 'hooks'), { recursive: true });
-    mkdirSync(join(this.workspaceRoot, this.config.library_path, 'rules'), { recursive: true });
+    mkdirSync(getMainPath(), { recursive: true });
   }
 
   listTasks(): Task[] {
-    const tasksPath = this.getTasksPath();
-    if (!existsSync(tasksPath)) return [];
-
-    const taskDirs = readdirSync(tasksPath).filter((d) =>
-      existsSync(join(tasksPath, d, 'task.yaml'))
-    );
-
-    return taskDirs.map((dir) => this.getTask(dir)).filter((t): t is Task => t !== null);
+    // Filter out tasks whose directories no longer exist
+    this.index.tasks = this.index.tasks.filter((t) => existsSync(getTaskMarkerPath(t.path)));
+    this.saveIndex();
+    return [...this.index.tasks];
   }
 
-  getTask(taskId: string): Task | null {
-    const taskFile = this.getTaskFilePath(taskId);
-    if (!existsSync(taskFile)) return null;
-
-    try {
-      const content = readFileSync(taskFile, 'utf-8');
-      const parsed = YAML.parse(content);
-      return TaskSchema.parse({ ...parsed, id: taskId });
-    } catch (e) {
-      console.error(`[TaskStore] Failed to parse ${taskFile}:`, e instanceof Error ? e.message : e);
+  getTask(name: string): Task | null {
+    const task = this.index.tasks.find((t) => t.name === name);
+    if (!task) return null;
+    // Verify directory still exists
+    if (!existsSync(getTaskMarkerPath(task.path))) {
+      this.deleteTask(name);
       return null;
     }
+    return { ...task };
   }
 
-  createTask(name: string, description?: string): Task {
-    const id = this.generateTaskId();
+  getTaskByPath(path: string): Task | null {
+    const task = this.index.tasks.find((t) => t.path === path);
+    if (!task) return null;
+    // Verify directory still exists
+    if (!existsSync(getTaskMarkerPath(task.path))) {
+      this.deleteTask(task.name);
+      return null;
+    }
+    return { ...task };
+  }
+
+  createTask(name: string, taskPath: string, description?: string): Task {
     const now = new Date().toISOString();
+    const absPath = existsSync(taskPath) ? taskPath : join(process.cwd(), taskPath);
 
     const task: Task = {
-      id,
       name,
-      description,
-      status: 'paused',
+      path: absPath,
       created_at: now,
-      updated_at: now,
+      status: 'paused',
+      description,
       skills: [],
       hooks: {},
-      rules: [],
-      directory: `./tasks/${id}`,
     };
 
-    const taskDir = this.getTaskDir(id);
-    mkdirSync(taskDir, { recursive: true });
-    mkdirSync(this.getTaskClaudeDir(id), { recursive: true });
-    mkdirSync(join(taskDir, 'src'), { recursive: true });
+    // Create marker directory in task path
+    mkdirSync(getTaskMarkerPath(absPath), { recursive: true });
 
-    this.saveTask(task);
-    return task;
+    // Add to index
+    this.index.tasks.push(task);
+    this.saveIndex();
+
+    return { ...task };
   }
 
-  saveTask(task: Task): void {
-    const taskFile = this.getTaskFilePath(task.id);
-    const taskData = { ...task };
-    delete (taskData as Record<string, unknown>).directory;
-    try {
-      const yaml = YAML.stringify(taskData);
-      writeFileSync(taskFile, yaml, 'utf-8');
-    } catch (e) {
-      console.error(`[TaskStore] Failed to save task ${task.id}:`, e instanceof Error ? e.message : e);
-      throw new Error(`Failed to save task ${task.id}: ${e instanceof Error ? e.message : e}`);
-    }
-  }
+  updateTask(name: string, updates: Partial<Task>): Task | null {
+    const idx = this.index.tasks.findIndex((t) => t.name === name);
+    if (idx === -1) return null;
 
-  updateTask(taskId: string, updates: Partial<Task>): Task | null {
-    const task = this.getTask(taskId);
-    if (!task) return null;
-
+    const task = this.index.tasks[idx];
     const updated: Task = {
       ...task,
       ...updates,
-      id: task.id,
-      updated_at: new Date().toISOString(),
+      name: task.name, // Don't allow renaming
     };
 
-    this.saveTask(updated);
-    return updated;
+    this.index.tasks[idx] = updated;
+    this.saveIndex();
+    return { ...updated };
   }
 
-  deleteTask(taskId: string): boolean {
-    const task = this.getTask(taskId);
-    if (!task) return false;
+  deleteTask(name: string): boolean {
+    const idx = this.index.tasks.findIndex((t) => t.name === name);
+    if (idx === -1) return false;
 
-    // Kill associated tmux session if exists
-    if (task.session?.tmux_session) {
-      const tmux = new TmuxManager();
-      tmux.killSession(task.session.tmux_session);
+    const task = this.index.tasks[idx];
+
+    // Remove marker directory but NOT the user's source files
+    const markerPath = getTaskMarkerPath(task.path);
+    if (existsSync(markerPath)) {
+      rmSync(markerPath, { recursive: true, force: true });
     }
 
-    rmSync(this.getTaskDir(taskId), { recursive: true, force: true });
+    this.index.tasks.splice(idx, 1);
+    this.saveIndex();
     return true;
   }
 
-  getActiveTask(): Task | null {
-    if (!this.config.active_task) return null;
-    return this.getTask(this.config.active_task);
+  taskExists(name: string): boolean {
+    return this.index.tasks.some((t) => t.name === name);
   }
 
-  setActiveTask(taskId: string | null): void {
-    this.config.active_task = taskId ?? undefined;
-    this.saveConfig(this.config);
+  taskPathExists(path: string): boolean {
+    return this.index.tasks.some((t) => t.path === path);
   }
 
-  getConfig(): WorkspaceConfig {
-    return { ...this.config };
+  isTaskDirectory(dir: string): boolean {
+    return existsSync(getTaskMarkerPath(dir));
   }
 
-  updateConfig(updates: Partial<WorkspaceConfig>): void {
-    this.config = { ...this.config, ...updates };
-    this.saveConfig(this.config);
-  }
-
-  private generateTaskId(): string {
-    const tasks = this.listTasks();
-    const maxNum = tasks.reduce((max, t) => {
-      const match = t.id.match(/task-(\d+)/);
-      return match ? Math.max(max, parseInt(match[1], 10)) : max;
-    }, 0);
-    return `task-${String(maxNum + 1).padStart(3, '0')}`;
-  }
-
-  isTaskDir(path: string): boolean {
-    return existsSync(join(path, WORKSPACE_CONFIG_NAME));
-  }
-
-  findWorkspaceRoot(startPath: string): string | null {
-    let current = startPath;
-    const maxIterations = 20;
-    let iterations = 0;
-
-    while (iterations < maxIterations) {
-      if (this.isTaskDir(current)) {
-        return current;
-      }
-      const parent = join(current, '..');
-      if (parent === current) break;
-      current = parent;
-      iterations++;
-    }
-    return null;
+  getMainPath(): string {
+    return getMainPath();
   }
 }

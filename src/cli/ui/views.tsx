@@ -5,7 +5,6 @@ import { TaskStore } from '../../task/store.js';
 import { LibraryStore, Skill, Hook } from '../../library/store.js';
 import { GlobalLibraryStore } from '../../global-library/index.js';
 import { ListBox } from './listbox.js';
-import { scanOpenSpecProject, OpenSpecProject } from '../../openspec/scanner.js';
 
 type View =
   | 'main'
@@ -18,9 +17,8 @@ type View =
   | 'tasks'
   | 'task-detail'
   | 'task-create'
-  | 'task-create-resources'
+  | 'task-create-current-dir'
   | 'task-delete-confirm'
-  | 'task-openspec-bind'
   | 'skills'
   | 'skill-categories'
   | 'skill-list'
@@ -31,9 +29,6 @@ type View =
   | 'hook-create'
   | 'hook-select'
   | 'hook-select-type'
-  | 'openspec'
-  | 'openspec-change'
-  | 'openspec-task-select'
   | 'sessions'
   | 'back-confirm';
 
@@ -45,7 +40,7 @@ interface InteractiveAppProps {
 
 export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) {
   const [view, setView] = useState<View>('main');
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [selectedTaskName, setSelectedTaskName] = useState<string | null>(null);
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
   const [selectedHookId, setSelectedHookId] = useState<string | null>(null);
   const [selectedHookType, setSelectedHookType] = useState<string>('all');
@@ -57,8 +52,6 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
   const [selectSkillPage, setSelectSkillPage] = useState(1);
   const [selectHookSearch, setSelectHookSearch] = useState('');
   const [selectHookPage, setSelectHookPage] = useState(1);
-  const [openspecProject, setOpenspecProject] = useState<OpenSpecProject | null>(null);
-  const [selectedChangeId, setSelectedChangeId] = useState<string | null>(null);
   const [cursorPositions, setCursorPositions] = useState<Record<string, number>>({});
 
   // Global library store
@@ -133,12 +126,6 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               label: 'Sessions',
               description: 'Manage running task sessions',
               onSelect: () => setView('sessions'),
-            },
-            {
-              id: 'openspec',
-              label: 'OpenSpec',
-              description: openspecProject ? `${openspecProject.changes.length} changes` : 'Scan project first',
-              onSelect: () => setView('openspec'),
             },
           ]}
           onBack={onQuit}
@@ -416,23 +403,75 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     );
   }
 
-  // Task Create
+  // Task Create - Step 1: Enter name
   if (view === 'task-create') {
     return (
       <TaskCreateView
         onSubmit={(name) => {
-          store.createTask(name);
-          refresh();
-          setView('tasks');
+          setSelectedTaskName(name);
+          setView('task-create-current-dir');
         }}
         onCancel={() => setView('tasks')}
       />
     );
   }
 
+  // Task Create - Step 2: Ask about current directory
+  if (view === 'task-create-current-dir' && selectedTaskName) {
+    return (
+      <Box key="task-create-current-dir" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>CREATE TASK</Text>
+        </Box>
+        <Box paddingX={1} flexDirection="column">
+          <Text>Task name: <Text color="cyan">{selectedTaskName}</Text></Text>
+          <Text dimColor>Current directory: {process.cwd()}</Text>
+        </Box>
+        <Box marginTop={1} flexDirection="column">
+          <Text>Create task in current directory?</Text>
+        </Box>
+
+        <ListBox
+          key={`task-create-current-dir-${refreshKey}`}
+          items={[
+            {
+              id: 'yes',
+              label: 'Yes, create here',
+              description: 'Create .tharness/ marker in current directory',
+              onSelect: () => {
+                const cwd = process.cwd();
+                if (store.taskExists(selectedTaskName)) {
+                  // Task with this name already exists, error
+                  return;
+                }
+                store.createTask(selectedTaskName, cwd);
+                refresh();
+                setSelectedTaskName(null);
+                setView('tasks');
+              },
+            },
+            {
+              id: 'no',
+              label: 'No, choose another location',
+              description: 'Exit and cd to desired directory first',
+              onSelect: () => {
+                setSelectedTaskName(null);
+                setView('tasks');
+              },
+            },
+          ]}
+        />
+
+        <Box marginTop={1}>
+          <Text dimColor>[Esc] Cancel and go back</Text>
+        </Box>
+      </Box>
+    );
+  }
+
   // Task Detail
-  if (view === 'task-detail' && selectedTaskId) {
-    const task = store.getTask(selectedTaskId);
+  if (view === 'task-detail' && selectedTaskName) {
+    const task = store.getTask(selectedTaskName);
     if (!task) {
       setView('tasks');
       return null;
@@ -441,18 +480,16 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     return (
       <Box key="task-detail" flexDirection="column" flexGrow={1}>
         <Box borderStyle="bold" padding={1} marginBottom={1}>
-          <Text bold>{task.id.toUpperCase()}: </Text>
+          <Text bold>TASK: </Text>
           <Text>{task.name}</Text>
         </Box>
 
         <Box paddingX={1} flexDirection="column">
+          <Text>Path: <Text dimColor>{task.path}</Text></Text>
           <Text>Status: <Text color="cyan">{task.status}</Text></Text>
           <Text>Skills: {task.skills.length} linked</Text>
           <Text>Hooks: {Object.values(task.hooks).flat().length} linked</Text>
           <Text>Created: {new Date(task.created_at).toLocaleDateString()}</Text>
-          {task.openspec?.change && (
-            <Text>OpenSpec: <Text color="cyan">{task.openspec.change}</Text></Text>
-          )}
         </Box>
 
         <Box marginTop={1} flexDirection="column">
@@ -467,7 +504,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               label: task.status === 'in_progress' ? 'Deactivate' : 'Activate',
               description: task.status === 'in_progress' ? 'Stop working' : 'Start working',
               onSelect: () => {
-                store.updateTask(selectedTaskId, {
+                store.updateTask(selectedTaskName, {
                   status: task.status === 'in_progress' ? 'paused' : 'in_progress',
                 });
                 refresh();
@@ -486,23 +523,6 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               onSelect: () => setView('hook-select'),
             },
             {
-              id: 'bind-openspec',
-              label: task.openspec?.change ? 'Change OpenSpec Binding' : 'Bind OpenSpec',
-              description: task.openspec?.change ? `Bound to: ${task.openspec.change}` : 'Link to OpenSpec change',
-              onSelect: () => setView('task-openspec-bind'),
-            },
-            ...(task.openspec?.change ? [{
-              id: 'unbind-openspec',
-              label: 'Unbind OpenSpec',
-              description: 'Remove OpenSpec binding',
-              onSelect: () => {
-                store.updateTask(selectedTaskId, {
-                  openspec: undefined,
-                });
-                refresh();
-              },
-            }] : []),
-            {
               id: 'delete',
               label: 'Delete Task',
               description: 'This action cannot be undone',
@@ -520,8 +540,8 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
   }
 
   // Task Delete Confirm
-  if (view === 'task-delete-confirm' && selectedTaskId) {
-    const task = store.getTask(selectedTaskId);
+  if (view === 'task-delete-confirm' && selectedTaskName) {
+    const task = store.getTask(selectedTaskName);
     if (!task) {
       setView('tasks');
       return null;
@@ -532,119 +552,13 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
         title="DELETE TASK"
         message={`Delete "${task.name}"? This cannot be undone.`}
         onConfirm={() => {
-          store.deleteTask(selectedTaskId);
+          store.deleteTask(selectedTaskName);
           refresh();
           setView('tasks');
           setSelectedTaskId(null);
         }}
         onCancel={() => setView('task-detail')}
       />
-    );
-  }
-
-  // Task OpenSpec Bind
-  if (view === 'task-openspec-bind' && selectedTaskId) {
-    const task = store.getTask(selectedTaskId);
-    const scanPath = join(process.cwd(), '..');
-    const project = openspecProject || scanOpenSpecProject(scanPath);
-
-    if (!project) {
-      return (
-        <Box key="task-openspec-bind" flexDirection="column" flexGrow={1}>
-          <Box borderStyle="bold" padding={1} marginBottom={1}>
-            <Text bold>BIND OPENSPEC</Text>
-          </Box>
-          <Box padding={1}>
-            <Text>No OpenSpec project scanned yet.</Text>
-            <Text dimColor marginTop={1}>Go to OpenSpec in main menu and scan a project first.</Text>
-          </Box>
-          <Box marginTop={1} flexDirection="column">
-            <Text dimColor paddingX={1}>[Esc] Back to task</Text>
-          </Box>
-        </Box>
-      );
-    }
-
-    return (
-      <Box key="task-openspec-bind" flexDirection="column" flexGrow={1}>
-        <Box borderStyle="bold" padding={1} marginBottom={1}>
-          <Text bold>BIND OPENSPEC</Text>
-          <Text dimColor> - {project.name}</Text>
-        </Box>
-
-        <ListBox
-          key={`task-openspec-bind-${refreshKey}`}
-          items={project.changes.map((change) => ({
-            id: change.id,
-            label: change.name || change.id,
-            description: `${change.capabilities.length} capabilities`,
-            onSelect: () => {
-              if (!task) return;
-              store.updateTask(selectedTaskId, {
-                openspec: {
-                  change: change.id,
-                  capability: undefined,
-                  path: project.root,
-                },
-              });
-              refresh();
-              setView('task-detail');
-            },
-          }))}
-          onBack={() => setView('task-detail')}
-        />
-
-        <Box marginTop={1} flexDirection="column">
-          <Text dimColor>Select a change to bind to this task</Text>
-          <Text dimColor>[Esc] Back to task</Text>
-        </Box>
-      </Box>
-    );
-  }
-
-  // OpenSpec Task Select (select a task to bind to the selected change)
-  if (view === 'openspec-task-select' && selectedChangeId && openspecProject) {
-    const tasks = store.listTasks();
-    const change = openspecProject.changes.find((c) => c.id === selectedChangeId);
-
-    if (!change) {
-      setView('openspec');
-      return null;
-    }
-
-    return (
-      <Box key="openspec-task-select" flexDirection="column" flexGrow={1}>
-        <Box borderStyle="bold" padding={1} marginBottom={1}>
-          <Text bold>BIND TO TASK</Text>
-          <Text dimColor> - {change.name || change.id}</Text>
-        </Box>
-
-        <ListBox
-          key={`openspec-task-select-${refreshKey}`}
-          items={tasks.map((t) => ({
-            id: t.id,
-            label: t.name,
-            description: t.openspec?.change ? `Bound to: ${t.openspec.change}` : 'No OpenSpec binding',
-            onSelect: () => {
-              store.updateTask(t.id, {
-                openspec: {
-                  change: change.id,
-                  capability: undefined,
-                  path: openspecProject.root,
-                },
-              });
-              refresh();
-              setView('openspec-change');
-            },
-          }))}
-          onBack={() => setView('openspec-change')}
-        />
-
-        <Box marginTop={1} flexDirection="column">
-          <Text dimColor>Select a task to bind to this change</Text>
-          <Text dimColor>[Esc] Back to change detail</Text>
-        </Box>
-      </Box>
     );
   }
 
@@ -756,7 +670,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
   }
 
   // Skill Select - Category Selection (for linking to task)
-  if (view === 'skill-select' && selectedTaskId) {
+  if (view === 'skill-select' && selectedTaskName) {
     const categories = globalLibrary.listSkillCategories();
 
     return (
@@ -789,13 +703,13 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
   }
 
   // Skill Select - Skills in Category
-  if (view === 'skill-select-category' && selectedTaskId) {
+  if (view === 'skill-select-category' && selectedTaskName) {
     const result = globalLibrary.listSkillsByCategory(skillCategory, {
       search: selectSkillSearch || undefined,
       page: selectSkillPage,
       pageSize: 8,
     });
-    const task = store.getTask(selectedTaskId);
+    const task = store.getTask(selectedTaskName);
     const linkedSkillIds = task?.skills.map((s) => s.skill) || [];
 
     return (
@@ -821,7 +735,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
                   ...task.skills,
                   { skill: s.id, version: '1.0', enabled: true },
                 ];
-                store.updateTask(selectedTaskId, { skills: updatedSkills });
+                store.updateTask(selectedTaskName, { skills: updatedSkills });
                 refresh();
                 setView('task-detail');
               },
@@ -904,7 +818,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
   }
 
   // Hook Select - Type Selection (for linking to task)
-  if (view === 'hook-select' && selectedTaskId) {
+  if (view === 'hook-select' && selectedTaskName) {
     const hooksByType = globalLibrary.listHooksByType();
     const hookTypes = Object.keys(hooksByType);
 
@@ -938,13 +852,13 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
   }
 
   // Hook Select - Hooks in Type
-  if (view === 'hook-select-type' && selectedTaskId) {
+  if (view === 'hook-select-type' && selectedTaskName) {
     const result = globalLibrary.listHooksByTypePaginated(selectedHookType, {
       search: selectHookSearch || undefined,
       page: selectHookPage,
       pageSize: 8,
     });
-    const task = store.getTask(selectedTaskId);
+    const task = store.getTask(selectedTaskName);
     const linkedHookIds = Object.values(task?.hooks || {}).flat();
 
     return (
@@ -973,7 +887,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
                 if (!updatedHooks[h.type]!.includes(h.id)) {
                   updatedHooks[h.type]!.push(h.id);
                 }
-                store.updateTask(selectedTaskId, { hooks: updatedHooks });
+                store.updateTask(selectedTaskName, { hooks: updatedHooks });
                 refresh();
                 setView('task-detail');
               },
@@ -993,106 +907,6 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
             </Text>
           )}
           <Text dimColor>[b] Back to types</Text>
-        </Box>
-      </Box>
-    );
-  }
-
-  // OpenSpec - scan and list changes
-  if (view === 'openspec') {
-    const scanPath = join(process.cwd(), '..');
-
-    return (
-      <Box key="openspec" flexDirection="column" flexGrow={1}>
-        <Box borderStyle="bold" padding={1} marginBottom={1}>
-          <Text bold>OPENSPEC</Text>
-        </Box>
-
-        <ListBox
-          key={`openspec-${refreshKey}`}
-          items={[
-            {
-              id: 'scan',
-              label: '+ Scan for OpenSpec Project',
-              description: 'Scan parent directory for OpenSpec',
-              onSelect: () => {
-                const project = scanOpenSpecProject(scanPath);
-                setOpenspecProject(project);
-                refresh();
-              },
-            },
-            ...(openspecProject?.changes.map((change) => ({
-              id: change.id,
-              label: change.name || change.id,
-              description: `${change.capabilities.length} capabilities`,
-              onSelect: () => {
-                setSelectedChangeId(change.id);
-                setView('openspec-change');
-              },
-            })) || []),
-          ]}
-          onBack={goBack}
-        />
-
-        <Box marginTop={1} flexDirection="column">
-          <Text dimColor>Scan finds changes/ directory with proposal.md</Text>
-          <Text dimColor>[Esc] Back to main menu</Text>
-        </Box>
-      </Box>
-    );
-  }
-
-  // OpenSpec Change Detail
-  if (view === 'openspec-change' && selectedChangeId && openspecProject) {
-    const change = openspecProject.changes.find((c) => c.id === selectedChangeId);
-
-    if (!change) {
-      setView('openspec');
-      return null;
-    }
-
-    return (
-      <Box key="openspec-change" flexDirection="column" flexGrow={1}>
-        <Box borderStyle="bold" padding={1} marginBottom={1}>
-          <Text bold>CHANGE: </Text>
-          <Text>{change.name || change.id}</Text>
-        </Box>
-
-        <Box paddingX={1} flexDirection="column">
-          <Text>Description: {change.description || '(none)'}</Text>
-          <Text>Capabilities: {change.capabilities.length}</Text>
-        </Box>
-
-        {change.capabilities.length > 0 && (
-          <Box marginTop={1} flexDirection="column">
-            <Text bold paddingX={1}>Capabilities:</Text>
-            {change.capabilities.map((cap, idx) => (
-              <Box key={idx} paddingX={2}>
-                <Text dimColor>• {cap}</Text>
-              </Box>
-            ))}
-          </Box>
-        )}
-
-        <Box marginTop={1} flexDirection="column">
-          <Text bold paddingX={1}>Actions:</Text>
-        </Box>
-
-        <ListBox
-          key={`openspec-change-actions-${refreshKey}`}
-          items={[
-            {
-              id: 'bind-task',
-              label: 'Bind to Task',
-              description: 'Link this change to a task',
-              onSelect: () => setView('openspec-task-select'),
-            },
-          ]}
-          onBack={() => setView('openspec')}
-        />
-
-        <Box marginTop={1} flexDirection="column">
-          <Text dimColor paddingX={1}>[Esc] Back to OpenSpec</Text>
         </Box>
       </Box>
     );
