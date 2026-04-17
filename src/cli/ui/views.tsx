@@ -221,7 +221,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
 
   // Global Skills by Category
   if (view === 'global-skills-category') {
-    const skills = globalLibrary.listSkillsByCategory(skillCategory);
+    const result = globalLibrary.listSkillsByCategory(skillCategory);
 
     return (
       <Box key="global-skills-category" flexDirection="column" flexGrow={1}>
@@ -232,7 +232,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
 
         <ListBox
           key={`global-skills-category-${refreshKey}`}
-          items={skills.map((s) => ({
+          items={result.skills.map((s) => ({
             id: s.id,
             label: s.name,
             description: s.description?.substring(0, 50) || '(no description)',
