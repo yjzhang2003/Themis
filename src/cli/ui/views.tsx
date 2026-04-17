@@ -5,6 +5,7 @@ import { TaskStore } from '../../task/store.js';
 import { LibraryStore, Skill, Hook } from '../../library/store.js';
 import { GlobalLibraryStore } from '../../global-library/index.js';
 import { ListBox } from './listbox.js';
+import { useCLI } from '../context.js';
 
 type View =
   | 'main'
@@ -53,6 +54,9 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
   const [selectHookSearch, setSelectHookSearch] = useState('');
   const [selectHookPage, setSelectHookPage] = useState(1);
   const [cursorPositions, setCursorPositions] = useState<Record<string, number>>({});
+
+  // CLI context
+  const { workspaceRoot } = useCLI();
 
   // Global library store
   const globalLibrary = new GlobalLibraryStore();
@@ -425,7 +429,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
         </Box>
         <Box paddingX={1} flexDirection="column">
           <Text>Task name: <Text color="cyan">{selectedTaskName}</Text></Text>
-          <Text dimColor>Current directory: {process.cwd()}</Text>
+          <Text dimColor>Current directory: {workspaceRoot}</Text>
         </Box>
         <Box marginTop={1} flexDirection="column">
           <Text>Create task in current directory?</Text>
@@ -439,12 +443,11 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               label: 'Yes, create here',
               description: 'Create .tharness/ marker in current directory',
               onSelect: () => {
-                const cwd = process.cwd();
                 if (store.taskExists(selectedTaskName)) {
                   // Task with this name already exists, error
                   return;
                 }
-                store.createTask(selectedTaskName, cwd);
+                store.createTask(selectedTaskName, workspaceRoot);
                 refresh();
                 setSelectedTaskName(null);
                 setView('tasks');
