@@ -406,9 +406,19 @@ export class GlobalLibraryStore {
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  listSkillsByCategory(category: string): GlobalSkill[] {
+  listSkillsByCategory(category: string, search?: string): GlobalSkill[] {
     const skills = this.listSkills();
-    if (category === 'all') return skills;
-    return skills.filter((s) => s.category === category);
+    let filtered = category === 'all' ? skills : skills.filter((s) => s.category === category);
+
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filtered = filtered.filter(
+        (s) =>
+          s.name.toLowerCase().includes(searchLower) ||
+          s.description?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return filtered;
   }
 }

@@ -26,9 +26,11 @@ type View =
   | 'skill-list'
   | 'skill-create'
   | 'skill-select'
+  | 'skill-select-category'
   | 'hooks'
   | 'hook-create'
   | 'hook-select'
+  | 'hook-select-type'
   | 'openspec'
   | 'openspec-change'
   | 'openspec-task-select'
@@ -51,6 +53,8 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
   const [skillCategory, setSkillCategory] = useState<string>('all');
   const [skillPage, setSkillPage] = useState(1);
   const [skillSearch, setSkillSearch] = useState('');
+  const [selectSkillSearch, setSelectSkillSearch] = useState('');
+  const [selectHookSearch, setSelectHookSearch] = useState('');
   const [openspecProject, setOpenspecProject] = useState<OpenSpecProject | null>(null);
   const [selectedChangeId, setSelectedChangeId] = useState<string | null>(null);
   const [cursorPositions, setCursorPositions] = useState<Record<string, number>>({});
@@ -745,27 +749,62 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     );
   }
 
-  // Skill Select (for linking to task)
+  // Skill Select - Category Selection (for linking to task)
   if (view === 'skill-select' && selectedTaskId) {
-    const skills = globalLibrary.listSkills();
-    const task = store.getTask(selectedTaskId);
-    const linkedSkillIds = task?.skills.map((s) => s.skill) || [];
+    const categories = globalLibrary.listSkillCategories();
 
     return (
       <Box key="skill-select" flexDirection="column" flexGrow={1}>
         <Box borderStyle="bold" padding={1} marginBottom={1}>
           <Text bold>ADD SKILL TO TASK</Text>
         </Box>
-        <Text dimColor paddingX={1}>Select a skill to link:</Text>
+        <Text dimColor paddingX={1}>Select a category:</Text>
 
         <ListBox
           key={`skill-select-${refreshKey}`}
+          items={categories.map((cat) => ({
+            id: cat.name,
+            label: cat.name,
+            description: `${cat.count} skills`,
+            onSelect: () => {
+              setSkillCategory(cat.name);
+              setSelectSkillSearch('');
+              setView('skill-select-category');
+            },
+          }))}
+          onBack={() => setView('task-detail')}
+        />
+
+        <Box marginTop={1}>
+          <Text dimColor>[Esc] Back to task</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Skill Select - Skills in Category
+  if (view === 'skill-select-category' && selectedTaskId) {
+    const skills = globalLibrary.listSkillsByCategory(skillCategory, selectSkillSearch || undefined);
+    const task = store.getTask(selectedTaskId);
+    const linkedSkillIds = task?.skills.map((s) => s.skill) || [];
+
+    return (
+      <Box key="skill-select-category" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>ADD SKILL</Text>
+          <Text dimColor> - {skillCategory}</Text>
+          {selectSkillSearch && <Text dimColor> (search: "{selectSkillSearch}")</Text>}
+        </Box>
+        <Text dimColor paddingX={1}>Select a skill to link:</Text>
+
+        <ListBox
+          key={`skill-select-category-${refreshKey}`}
           items={skills
             .filter((s) => !linkedSkillIds.includes(s.id))
             .map((s) => ({
               id: s.id,
               label: s.name,
-              description: s.description || '(no description)',
+              description: s.description?.substring(0, 50) || '(no description)',
               onSelect: () => {
                 if (!task) return;
                 const updatedSkills = [
@@ -777,11 +816,11 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
                 setView('task-detail');
               },
             }))}
-          onBack={() => setView('task-detail')}
+          onBack={() => setView('skill-select')}
         />
 
         <Box marginTop={1}>
-          <Text dimColor>[Esc] Back to task</Text>
+          <Text dimColor>[b] Back to categories</Text>
         </Box>
       </Box>
     );
@@ -844,27 +883,70 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     );
   }
 
-  // Hook Select (for linking to task)
+  // Hook Select - Type Selection (for linking to task)
   if (view === 'hook-select' && selectedTaskId) {
-    const hooks = globalLibrary.listHooks();
-    const task = store.getTask(selectedTaskId);
-    const linkedHookIds = Object.values(task?.hooks || {}).flat();
+    const hooksByType = globalLibrary.listHooksByType();
+    const hookTypes = Object.keys(hooksByType);
 
     return (
       <Box key="hook-select" flexDirection="column" flexGrow={1}>
         <Box borderStyle="bold" padding={1} marginBottom={1}>
           <Text bold>ADD HOOK TO TASK</Text>
         </Box>
-        <Text dimColor paddingX={1}>Select a hook to link:</Text>
+        <Text dimColor paddingX={1}>Select a hook type:</Text>
 
         <ListBox
           key={`hook-select-${refreshKey}`}
-          items={hooks
+          items={hookTypes.map((type) => ({
+            id: type,
+            label: type,
+            description: `${hooksByType[type].length} hooks`,
+            onSelect: () => {
+              setSelectedHookType(type);
+              setSelectHookSearch('');
+              setView('hook-select-type');
+            },
+          }))}
+          onBack={() => setView('task-detail')}
+        />
+
+        <Box marginTop={1}>
+          <Text dimColor>[Esc] Back to task</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Hook Select - Hooks in Type
+  if (view === 'hook-select-type' && selectedTaskId) {
+    const hooksByType = globalLibrary.listHooksByType();
+    const hooks = hooksByType[selectedHookType] || [];
+    const task = store.getTask(selectedTaskId);
+    const linkedHookIds = Object.values(task?.hooks || {}).flat();
+    const filteredHooks = selectHookSearch
+      ? hooks.filter((h) =>
+          h.name.toLowerCase().includes(selectHookSearch.toLowerCase()) ||
+          h.description?.toLowerCase().includes(selectHookSearch.toLowerCase())
+        )
+      : hooks;
+
+    return (
+      <Box key="hook-select-type" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>ADD HOOK</Text>
+          <Text dimColor> - {selectedHookType}</Text>
+          {selectHookSearch && <Text dimColor> (search: "{selectHookSearch}")</Text>}
+        </Box>
+        <Text dimColor paddingX={1}>Select a hook to link:</Text>
+
+        <ListBox
+          key={`hook-select-type-${refreshKey}`}
+          items={filteredHooks
             .filter((h) => !linkedHookIds.includes(h.id))
             .map((h) => ({
               id: h.id,
               label: h.name,
-              description: `[${h.type}] ${h.command}`,
+              description: h.description?.substring(0, 50) || `[${h.type}] ${h.command}`,
               onSelect: () => {
                 if (!task) return;
                 const updatedHooks = { ...task.hooks };
@@ -879,11 +961,11 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
                 setView('task-detail');
               },
             }))}
-          onBack={() => setView('task-detail')}
+          onBack={() => setView('hook-select')}
         />
 
         <Box marginTop={1}>
-          <Text dimColor>[Esc] Back to task</Text>
+          <Text dimColor>[b] Back to types</Text>
         </Box>
       </Box>
     );
