@@ -23,7 +23,6 @@ export interface ListBoxProps {
 export function ListBox({
   items,
   initialIndex = 0,
-  onIndexChange,
   onBack,
   onNextPage,
   onPrevPage,
@@ -32,62 +31,72 @@ export function ListBox({
   onToggleSelect,
 }: ListBoxProps) {
   const [selectedIndex, setSelectedIndex] = useState(initialIndex);
+  const [keyHandler, setKeyHandler] = useState<((key: string) => void) | null>(null);
 
   useEffect(() => {
     setSelectedIndex(initialIndex);
   }, [items, initialIndex]);
 
-  // Handle keyboard navigation
+  // Set up key listener similar to menu.tsx
   useEffect(() => {
-    let cancelled = false;
+    const isTTY = process.stdin.isTTY;
 
-    const handleKeypress = (s: string | Buffer) => {
-      if (cancelled) return;
+    if (!isTTY) {
+      setKeyHandler(null);
+      return;
+    }
 
+    const handler = (s: string | Buffer) => {
       const data = typeof s === 'string' ? s : s.toString();
+      const key = data.trim();
+      if (!key) return;
 
-      if (data === '\u0003') return; // Ctrl+C
+      // Ctrl+C
+      if (s === '\u0003') {
+        return;
+      }
 
       // Escape - go back
-      if (data === '\u001b') {
+      if (key === '\u001b' || data === '\u001b[D') {
         if (onBack) onBack();
         return;
       }
 
-      // Arrow Up
-      if (data === '\u001b[A' || data === 'k') {
+      // Arrow Up or k
+      if (key === '\u001b[A' || key === 'k') {
         setSelectedIndex((prev) => Math.max(0, prev - 1));
         return;
       }
 
-      // Arrow Down
-      if (data === '\u001b[B' || data === 'j') {
+      // Arrow Down or j
+      if (key === '\u001b[B' || key === 'j') {
         setSelectedIndex((prev) => Math.min(items.length - 1, prev + 1));
         return;
       }
 
-      // Arrow Left - prev page
-      if (data === '\u001b[D' || data === 'n') {
+      // Arrow Left or n - prev page
+      if (key === '\u001b[D' || key === 'n') {
         if (onPrevPage) onPrevPage();
         return;
       }
 
-      // Arrow Right - next page
-      if (data === '\u001b[C' || data === 'l') {
+      // Arrow Right or l - next page
+      if (key === '\u001b[C' || key === 'l') {
         if (onNextPage) onNextPage();
         return;
       }
 
-      // Space - toggle select
-      if (data === ' ') {
+      // Space - toggle selection
+      if (key === ' ') {
         if (multiSelect && items[selectedIndex] && onToggleSelect) {
           onToggleSelect(items[selectedIndex].id);
+          setSelectedIndex((prev) => Math.min(items.length - 1, prev + 1));
         }
         return;
       }
 
-      // Enter
-      if (data === '\r' || data === '\n') {
+      // Enter - select
+      if (key === '\r' || key === '\n') {
         if (items[selectedIndex]) {
           items[selectedIndex].onSelect();
         }
@@ -95,14 +104,22 @@ export function ListBox({
       }
     };
 
-    if (process.stdin.on) {
-      process.stdin.on('keypress', handleKeypress);
+    try {
+      process.stdin.setRawMode?.(true);
+      process.stdin.resume?.();
+      process.stdin.setEncoding?.('utf8');
+      process.stdin.on?.('data', handler);
+      setKeyHandler(() => handler);
+    } catch {
+      setKeyHandler(null);
     }
 
     return () => {
-      cancelled = true;
-      if (process.stdin.off) {
-        process.stdin.off('keypress', handleKeypress);
+      try {
+        process.stdin.removeListener?.('data', handler);
+        process.stdin.setRawMode?.(false);
+      } catch {
+        // Ignore cleanup errors
       }
     };
   }, [items, selectedIndex, onBack, onNextPage, onPrevPage, multiSelect, onToggleSelect]);
@@ -118,7 +135,7 @@ export function ListBox({
   return (
     <Box flexDirection="column">
       {items.map((item, index) => {
-        const isSelected = index === selectedIndex;
+        const isSelected = index === selectedIndex && keyHandler;
         const isMultiSelected = selectedIds.includes(item.id);
         const maxDescWidth = 60;
         const descText = item.description?.split('\n')[0] || '';
