@@ -383,11 +383,11 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               },
             },
             ...tasks.map((t) => ({
-              id: t.id,
-              label: `${t.name}`,
+              id: t.name,
+              label: t.name,
               description: `[${t.status}] ${t.skills.length} skills, ${Object.values(t.hooks).flat().length} hooks`,
               onSelect: () => {
-                setSelectedTaskId(t.id);
+                setSelectedTaskName(t.name);
                 setView('task-detail');
               },
             })),
