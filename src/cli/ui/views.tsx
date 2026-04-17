@@ -68,7 +68,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
 
   const goBack = useCallback(() => {
     setView('main');
-    setSelectedTaskId(null);
+    setSelectedTaskName(null);
     setSelectedSkillId(null);
     setSelectedHookId(null);
     setSkillCategory('all');
@@ -558,7 +558,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
           store.deleteTask(selectedTaskName);
           refresh();
           setView('tasks');
-          setSelectedTaskId(null);
+          setSelectedTaskName(null);
         }}
         onCancel={() => setView('task-detail')}
       />
