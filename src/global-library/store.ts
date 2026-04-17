@@ -371,6 +371,36 @@ export class GlobalLibraryStore {
     return null;
   }
 
+  // Get full path to a skill directory or file
+  getSkillPath(id: string): string | null {
+    const skillsDir = join(this.globalPath, 'skills');
+
+    // Check directory format first
+    const dirPath = join(skillsDir, id);
+    if (existsSync(dirPath)) {
+      return dirPath;
+    }
+
+    // Check YAML format
+    const yamlPath = join(skillsDir, `${id}.yaml`);
+    if (existsSync(yamlPath)) {
+      return yamlPath;
+    }
+
+    return null;
+  }
+
+  // Get full path to a hook script
+  getHookPath(id: string): string | null {
+    const hooks = this.listHooks();
+    const hook = hooks.find(h => h.id === id);
+    if (hook) {
+      // The command is the path to the hook script
+      return hook.command;
+    }
+    return null;
+  }
+
   installRule(sourcePath: string, name?: string): GlobalRule {
     this.ensureDirectories();
     const rulesDir = join(this.globalPath, 'rules');

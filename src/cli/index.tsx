@@ -44,7 +44,7 @@ function CLI() {
 
   // Interactive mode
   if (showInteractive) {
-    return <InteractiveApp store={store} library={library} onQuit={() => process.exit(0)} />;
+    return <InteractiveApp store={store} onQuit={() => process.exit(0)} />;
   }
 
   if (showHelpFlag) {

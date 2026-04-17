@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { Task, TasksIndexSchema } from './types.js';
+import { GlobalLibraryStore } from '../global-library/index.js';
 
 const MAIN_DIR = '.tharness';
 const TASKS_FILE = 'tasks.json';
@@ -93,8 +94,20 @@ export class TaskStore {
       hooks: {},
     };
 
-    // Create marker directory in task path
+    // Create .tharness/ marker directory (CLI识别用)
     mkdirSync(getTaskMarkerPath(absPath), { recursive: true });
+
+    // Create .claude/ directory for Claude Code配置
+    const claudeDir = join(absPath, '.claude');
+    mkdirSync(claudeDir, { recursive: true });
+
+    // Write initial settings.json for Claude Code
+    const settingsPath = join(claudeDir, 'settings.json');
+    writeFileSync(
+      settingsPath,
+      JSON.stringify({ skills: [], hooks: {} }, null, 2),
+      'utf-8'
+    );
 
     // Add to index
     this.index.tasks.push(task);
@@ -119,16 +132,59 @@ export class TaskStore {
     return { ...updated };
   }
 
+  /**
+   * Sync task skills and hooks to .claude/settings.json
+   * Called when activating a task so Claude Code picks up the correct configuration
+   */
+  syncTaskResources(name: string): Task | null {
+    const task = this.getTask(name);
+    if (!task) return null;
+
+    const settingsPath = join(task.path, '.claude', 'settings.json');
+
+    // Get skill paths from global library
+    const globalLib = new GlobalLibraryStore();
+    const skillPaths = task.skills
+      .filter((s) => s.enabled)
+      .map((s) => globalLib.getSkillPath(s.skill))
+      .filter((p): p is string => p !== null);
+
+    // Build hooks object
+    const hooks: Record<string, string[]> = {};
+    for (const [type, hookIds] of Object.entries(task.hooks)) {
+      const hookPaths = hookIds
+        .map((id) => globalLib.getHookPath(id))
+        .filter((p): p is string => p !== null);
+      if (hookPaths.length > 0) {
+        hooks[type] = hookPaths;
+      }
+    }
+
+    const settings = {
+      skills: skillPaths,
+      hooks,
+    };
+
+    writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+    return task;
+  }
+
   deleteTask(name: string): boolean {
     const idx = this.index.tasks.findIndex((t) => t.name === name);
     if (idx === -1) return false;
 
     const task = this.index.tasks[idx];
 
-    // Remove marker directory but NOT the user's source files
+    // Remove .tharness/ marker directory but NOT the user's source files
     const markerPath = getTaskMarkerPath(task.path);
     if (existsSync(markerPath)) {
       rmSync(markerPath, { recursive: true, force: true });
+    }
+
+    // Remove .claude/ directory (Claude Code配置)
+    const claudePath = join(task.path, '.claude');
+    if (existsSync(claudePath)) {
+      rmSync(claudePath, { recursive: true, force: true });
     }
 
     this.index.tasks.splice(idx, 1);
