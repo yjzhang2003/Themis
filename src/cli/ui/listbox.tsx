@@ -49,6 +49,13 @@ export function ListBox({
   );
 
   useEffect(() => {
+    // Set raw mode for terminal input
+    try {
+      process.stdin.setRawMode?.(true);
+    } catch {
+      // Raw mode not supported
+    }
+
     const handleData = (s: string | Buffer) => {
       const data = typeof s === 'string' ? s : s.toString();
       const key = data.trim();
@@ -60,7 +67,7 @@ export function ListBox({
       }
 
       // Escape - go back
-      if (key === '\u001b' || key === '\u001b') {
+      if (key === '\u001b') {
         if (onBack) {
           onBack();
         }
@@ -113,16 +120,16 @@ export function ListBox({
     };
 
     try {
-      process.stdin.setRawMode?.(true);
       process.stdin.resume?.();
       process.stdin.on?.('data', handleData);
     } catch {
-      // Raw mode not supported
+      // Resume/input not supported
     }
 
     return () => {
       try {
         process.stdin.removeListener?.('data', handleData);
+        process.stdin.setRawMode?.(false);
       } catch {
         // Ignore
       }
