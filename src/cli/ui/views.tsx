@@ -53,6 +53,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
   const [skillSearch, setSkillSearch] = useState('');
   const [openspecProject, setOpenspecProject] = useState<OpenSpecProject | null>(null);
   const [selectedChangeId, setSelectedChangeId] = useState<string | null>(null);
+  const [cursorPositions, setCursorPositions] = useState<Record<string, number>>({});
 
   // Global library store
   const globalLibrary = new GlobalLibraryStore();
@@ -394,7 +395,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               },
             })),
           ]}
-          initialIndex={cursorPositions['tasks'] || 0}
+          initialIndex={0}
           onBack={goBack}
         />
 
@@ -817,7 +818,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
               },
             })),
           ]}
-          initialIndex={cursorPositions['hooks'] || 0}
+          initialIndex={0}
           onBack={goBack}
         />
 
