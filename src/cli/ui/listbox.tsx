@@ -48,8 +48,6 @@ export function ListBox({
 
     const handler = (s: string | Buffer) => {
       const data = typeof s === 'string' ? s : s.toString();
-      const key = data.trim();
-      if (!key) return;
 
       // Ctrl+C
       if (s === '\u0003') {
@@ -57,37 +55,37 @@ export function ListBox({
       }
 
       // Escape - go back
-      if (key === '\u001b' || data === '\u001b[D') {
+      if (data === '\u001b') {
         if (onBack) onBack();
         return;
       }
 
       // Arrow Up or k
-      if (key === '\u001b[A' || key === 'k') {
+      if (data === '\u001b[A' || data === 'k') {
         setSelectedIndex((prev) => Math.max(0, prev - 1));
         return;
       }
 
       // Arrow Down or j
-      if (key === '\u001b[B' || key === 'j') {
+      if (data === '\u001b[B' || data === 'j') {
         setSelectedIndex((prev) => Math.min(items.length - 1, prev + 1));
         return;
       }
 
       // Arrow Left or n - prev page
-      if (key === '\u001b[D' || key === 'n') {
+      if (data === '\u001b[D' || data === 'n') {
         if (onPrevPage) onPrevPage();
         return;
       }
 
       // Arrow Right or l - next page
-      if (key === '\u001b[C' || key === 'l') {
+      if (data === '\u001b[C' || data === 'l') {
         if (onNextPage) onNextPage();
         return;
       }
 
       // Space - toggle selection
-      if (key === ' ') {
+      if (data === ' ') {
         if (multiSelect && items[selectedIndex] && onToggleSelect) {
           onToggleSelect(items[selectedIndex].id);
           setSelectedIndex((prev) => Math.min(items.length - 1, prev + 1));
@@ -95,8 +93,8 @@ export function ListBox({
         return;
       }
 
-      // Enter - select
-      if (key === '\r' || key === '\n') {
+      // Enter - select (don't trim!)
+      if (data === '\r' || data === '\n') {
         if (items[selectedIndex]) {
           items[selectedIndex].onSelect();
         }
