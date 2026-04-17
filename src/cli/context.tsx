@@ -1,11 +1,9 @@
 import React, { createContext, useContext, useMemo, ReactNode } from 'react';
 import { existsSync } from 'fs';
 import { TaskStore } from '../task/store.js';
-import { LibraryStore } from '../library/store.js';
 
 interface CLIContextType {
   store: TaskStore | null;
-  library: LibraryStore | null;
   workspaceRoot: string;
   args: Record<string, unknown>;
   command: string;
@@ -15,7 +13,6 @@ interface CLIContextType {
 
 const CLIContext = createContext<CLIContextType>({
   store: null,
-  library: null,
   workspaceRoot: process.cwd(),
   args: {},
   command: '',
@@ -53,17 +50,11 @@ export function CLIProvider({ children }: CLIProviderProps) {
     return taskStore;
   }, []);
 
-  const library = useMemo(() => {
-    const libStore = new LibraryStore(workspaceRoot);
-    libStore.ensureDirectories();
-    return libStore;
-  }, [workspaceRoot]);
-
   const help = parsedArgs.h || parsedArgs.help || false;
 
   const context = useMemo(
-    () => ({ store, library, workspaceRoot, args: parsedArgs, command: cmd, subcommand: sub, showHelp: () => help }),
-    [store, library, workspaceRoot, parsedArgs, cmd, sub, help]
+    () => ({ store, workspaceRoot, args: parsedArgs, command: cmd, subcommand: sub, showHelp: () => help }),
+    [store, workspaceRoot, parsedArgs, cmd, sub, help]
   );
 
   return <CLIContext.Provider value={context}>{children}</CLIContext.Provider>;

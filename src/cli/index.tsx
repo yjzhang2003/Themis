@@ -29,7 +29,7 @@ import { InteractiveApp } from './ui/views.js';
 export { TaskStore } from '../task/store.js';
 
 function CLI() {
-  const { args, store, library, command, subcommand, showHelp } = useCLI();
+  const { args, store, command, subcommand, showHelp } = useCLI();
 
   // Derive interactive mode directly from args to avoid stale closure issues
   const cmdArgs = args._ as string[] || [];
@@ -38,8 +38,8 @@ function CLI() {
   // Check for help flags
   const isHelpMode = cmdArgs[0] === 'help' || args.h || args.help;
 
-  // Interactive mode when: no command or explicitly requested, AND store/library are ready
-  const showInteractive = isInteractiveMode && !isHelpMode && store && library;
+  // Interactive mode when: no command or explicitly requested, AND store is ready
+  const showInteractive = isInteractiveMode && !isHelpMode && store;
   const showHelpFlag = isHelpMode || args.help || args.h;
 
   // Interactive mode
@@ -55,30 +55,25 @@ function CLI() {
   if (command === 'skill') {
     switch (subcommand) {
       case 'add':
-        return <SkillAddCommand library={library} store={store} args={args} />;
+        return <SkillAddCommand store={store} args={args} />;
       case 'list':
       case 'ls':
-        return <SkillListCommand library={library} args={args} />;
+        return <SkillListCommand store={store} args={args} />;
       case 'link':
-        return <SkillLinkCommand library={library} store={store} args={args} />;
+        return <SkillLinkCommand store={store} args={args} />;
       case 'unlink':
-        return <SkillUnlinkCommand library={library} store={store} args={args} />;
+        return <SkillUnlinkCommand store={store} args={args} />;
       default:
         return (
           <Box flexDirection="column" padding={1}>
             <Text bold>Skill Commands</Text>
             <Text>
-              <Text color="cyan">tharness skill add &lt;name&gt;</Text> - Create a new skill
+              <Text color="cyan">tharness skill link &lt;skill-id&gt; &lt;task-name&gt;</Text> - Link skill to task
             </Text>
             <Text>
-              <Text color="cyan">tharness skill list</Text> - List all skills
+              <Text color="cyan">tharness skill unlink &lt;skill-id&gt; &lt;task-name&gt;</Text> - Unlink skill from task
             </Text>
-            <Text>
-              <Text color="cyan">tharness skill link &lt;skill-id&gt; [task-id]</Text> - Link skill to task
-            </Text>
-            <Text>
-              <Text color="cyan">tharness skill unlink &lt;skill-id&gt; [task-id]</Text> - Unlink skill from task
-            </Text>
+            <Text dimColor>Use tharness global skill list to browse available skills</Text>
           </Box>
         );
     }
@@ -88,31 +83,25 @@ function CLI() {
   if (command === 'hook') {
     switch (subcommand) {
       case 'add':
-        return <HookAddCommand library={library} store={store} args={args} />;
+        return <HookAddCommand store={store} args={args} />;
       case 'list':
       case 'ls':
-        return <HookListCommand library={library} />;
+        return <HookListCommand />;
       case 'link':
-        return <HookLinkCommand library={library} store={store} args={args} />;
+        return <HookLinkCommand store={store} args={args} />;
       case 'unlink':
-        return <HookUnlinkCommand library={library} store={store} args={args} />;
+        return <HookUnlinkCommand store={store} args={args} />;
       default:
         return (
           <Box flexDirection="column" padding={1}>
             <Text bold>Hook Commands</Text>
             <Text>
-              <Text color="cyan">tharness hook add &lt;name&gt; &lt;type&gt;</Text> --command &lt;cmd&gt; - Create a hook
-            </Text>
-            <Text dimColor>  Types: PreToolUse, PostToolUse, Stop</Text>
-            <Text>
-              <Text color="cyan">tharness hook list</Text> - List all hooks
+              <Text color="cyan">tharness hook link &lt;hook-id&gt; &lt;task-name&gt;</Text> - Link hook to task
             </Text>
             <Text>
-              <Text color="cyan">tharness hook link &lt;hook-id&gt; [task-id]</Text> - Link hook to task
+              <Text color="cyan">tharness hook unlink &lt;hook-id&gt; &lt;task-name&gt;</Text> - Unlink hook from task
             </Text>
-            <Text>
-              <Text color="cyan">tharness hook unlink &lt;hook-id&gt; [task-id]</Text> - Unlink hook from task
-            </Text>
+            <Text dimColor>Use tharness global hook list to browse available hooks</Text>
           </Box>
         );
     }
@@ -131,7 +120,7 @@ function CLI() {
       return <StatusCommand store={store} args={args} />;
     case 'activate':
     case 'ac':
-      return <ActivateCommand store={store} library={library} args={args} />;
+      return <ActivateCommand store={store} args={args} />;
     case 'openspec':
     case 'os':
       return <OpenSpecCommand store={store} args={args} />;

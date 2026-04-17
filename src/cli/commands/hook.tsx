@@ -1,24 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Text } from 'ink';
-import { LibraryStore, Hook } from '../../library/store.js';
+import { GlobalLibraryStore, GlobalHook } from '../../global-library/store.js';
 import { TaskStore } from '../../task/store.js';
 
 interface HookCommandProps {
-  library: LibraryStore | null;
   store: TaskStore | null;
   args: Record<string, unknown>;
 }
 
-export function HookAddCommand({ library, store, args }: HookCommandProps) {
-  const [result, setResult] = useState<{ success: boolean; hook?: Hook; error?: string }>({
+export function HookAddCommand({ args }: HookCommandProps) {
+  const [result, setResult] = useState<{ success: boolean; error?: string }>({
     success: false,
   });
 
   useEffect(() => {
-    if (!library) {
-      setResult({ success: false, error: 'Not in a workspace' });
-      return;
-    }
+    const globalLib = new GlobalLibraryStore();
+    globalLib.ensureDirectories();
 
     const name = args._[2] as string | undefined;
     const type = (args._[3] as string) || 'PostToolUse';
@@ -26,12 +23,12 @@ export function HookAddCommand({ library, store, args }: HookCommandProps) {
     const matcher = (args.matcher || args.m) as string | undefined;
 
     if (!name) {
-      setResult({ success: false, error: 'Usage: tharness hook add <name> <type> --command <cmd> [--matcher <pattern>]' });
+      setResult({ success: false, error: 'Usage: tharness global hook add <name> <type> --command <cmd> [--matcher <pattern>]' });
       return;
     }
 
     if (!command) {
-      setResult({ success: false, error: 'Usage: tharness hook add <name> <type> --command <cmd>' });
+      setResult({ success: false, error: 'Usage: tharness global hook add <name> <type> --command <cmd>' });
       return;
     }
 
@@ -41,18 +38,12 @@ export function HookAddCommand({ library, store, args }: HookCommandProps) {
     }
 
     try {
-      const hook = library.createHook({
-        name,
-        type: type as 'PreToolUse' | 'PostToolUse' | 'Stop',
-        matcher: matcher || '.*',
-        command,
-        description: (args.description || args.d) as string | undefined,
-      });
-      setResult({ success: true, hook });
+      globalLib.installHook(command, name, type, matcher);
+      setResult({ success: true });
     } catch (e) {
       setResult({ success: false, error: e instanceof Error ? e.message : 'Unknown error' });
     }
-  }, [library, args]);
+  }, [args]);
 
   if (result.error) {
     return (
@@ -64,46 +55,31 @@ export function HookAddCommand({ library, store, args }: HookCommandProps) {
     );
   }
 
-  if (!result.hook) {
-    return (
-      <Box padding={1}>
-        <Text dimColor>Creating hook...</Text>
-      </Box>
-    );
-  }
-
   return (
     <Box flexDirection="column" padding={1}>
       <Box>
         <Text color="green">✓</Text>
-        <Text> Created hook </Text>
-        <Text color="cyan">{result.hook.id}</Text>
+        <Text> Hook installed to global library</Text>
       </Box>
-      <Box flexDirection="column" marginTop={1} paddingLeft={2}>
-        <Text>Type: {result.hook.type}</Text>
-        <Text>Command: {result.hook.command}</Text>
-        <Text dimColor>File: library/hooks/{result.hook.id}.yaml</Text>
+      <Box marginTop={1}>
+        <Text dimColor>Hooks are stored in ~/.claude/hooks/hooks.json</Text>
       </Box>
     </Box>
   );
 }
 
-export function HookListCommand({ library }: { library: LibraryStore | null }) {
-  const [hooks, setHooks] = useState<Hook[]>([]);
+export function HookListCommand() {
+  const [hooks, setHooks] = useState<GlobalHook[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!library) {
-      setError('Not in a workspace');
-      return;
-    }
-
     try {
-      setHooks(library.listHooks());
+      const globalLib = new GlobalLibraryStore();
+      setHooks(globalLib.listHooks());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error');
     }
-  }, [library]);
+  }, []);
 
   if (error) {
     return (
@@ -117,10 +93,10 @@ export function HookListCommand({ library }: { library: LibraryStore | null }) {
 
   return (
     <Box flexDirection="column" padding={1}>
-      <Text bold>Hooks</Text>
+      <Text bold>Global Hooks</Text>
       {hooks.length === 0 ? (
         <Box marginTop={1}>
-          <Text dimColor>No hooks yet. Run 'tharness hook add [name] [type] --command [cmd]' to create one.</Text>
+          <Text dimColor>No hooks yet. Run 'tharness global hook add [name] [type] --command [cmd]' to create one.</Text>
         </Box>
       ) : (
         <Box flexDirection="column" marginTop={1}>
@@ -143,48 +119,41 @@ export function HookListCommand({ library }: { library: LibraryStore | null }) {
   );
 }
 
-export function HookLinkCommand({
-  library,
-  store,
-  args,
-}: {
-  library: LibraryStore | null;
-  store: TaskStore | null;
-  args: Record<string, unknown>;
-}) {
+export function HookLinkCommand({ store, args }: HookCommandProps) {
   const [result, setResult] = useState<{ success: boolean; error?: string }>({
     success: false,
   });
 
   useEffect(() => {
-    if (!library || !store) {
-      setResult({ success: false, error: 'Not in a workspace' });
+    if (!store) {
+      setResult({ success: false, error: 'Store not available' });
       return;
     }
 
     const hookId = args._[2] as string | undefined;
-    const taskId = (args._[3] as string | undefined) || store.getConfig().active_task;
+    const taskName = args._[3] as string | undefined;
 
     if (!hookId) {
-      setResult({ success: false, error: 'Usage: tharness hook link <hook-id> [task-id]' });
+      setResult({ success: false, error: 'Usage: tharness hook link <hook-id> [task-name]' });
       return;
     }
 
-    if (!taskId) {
-      setResult({ success: false, error: 'No active task. Specify task-id or activate a task first.' });
+    if (!taskName) {
+      setResult({ success: false, error: 'Usage: tharness hook link <hook-id> [task-name]' });
       return;
     }
 
     try {
-      const hook = library.getHook(hookId);
+      const globalLib = new GlobalLibraryStore();
+      const hook = globalLib.getHook(hookId);
       if (!hook) {
         setResult({ success: false, error: `Hook not found: ${hookId}` });
         return;
       }
 
-      const task = store.getTask(taskId);
+      const task = store.getTask(taskName);
       if (!task) {
-        setResult({ success: false, error: `Task not found: ${taskId}` });
+        setResult({ success: false, error: `Task not found: ${taskName}` });
         return;
       }
 
@@ -197,12 +166,12 @@ export function HookLinkCommand({
         updatedHooks[hook.type]!.push(hookId);
       }
 
-      store.updateTask(taskId, { hooks: updatedHooks });
+      store.updateTask(taskName, { hooks: updatedHooks });
       setResult({ success: true });
     } catch (e) {
       setResult({ success: false, error: e instanceof Error ? e.message : 'Unknown error' });
     }
-  }, [library, store, args]);
+  }, [store, args]);
 
   if (result.error) {
     return (
@@ -224,42 +193,34 @@ export function HookLinkCommand({
   );
 }
 
-export function HookUnlinkCommand({
-  library,
-  store,
-  args,
-}: {
-  library: LibraryStore | null;
-  store: TaskStore | null;
-  args: Record<string, unknown>;
-}) {
+export function HookUnlinkCommand({ store, args }: HookCommandProps) {
   const [result, setResult] = useState<{ success: boolean; error?: string }>({
     success: false,
   });
 
   useEffect(() => {
-    if (!library || !store) {
-      setResult({ success: false, error: 'Not in a workspace' });
+    if (!store) {
+      setResult({ success: false, error: 'Store not available' });
       return;
     }
 
     const hookId = args._[2] as string | undefined;
-    const taskId = (args._[3] as string | undefined) || store.getConfig().active_task;
+    const taskName = args._[3] as string | undefined;
 
     if (!hookId) {
-      setResult({ success: false, error: 'Usage: tharness hook unlink <hook-id> [task-id]' });
+      setResult({ success: false, error: 'Usage: tharness hook unlink <hook-id> [task-name]' });
       return;
     }
 
-    if (!taskId) {
-      setResult({ success: false, error: 'No active task. Specify task-id or activate a task first.' });
+    if (!taskName) {
+      setResult({ success: false, error: 'Usage: tharness hook unlink <hook-id> [task-name]' });
       return;
     }
 
     try {
-      const task = store.getTask(taskId);
+      const task = store.getTask(taskName);
       if (!task) {
-        setResult({ success: false, error: `Task not found: ${taskId}` });
+        setResult({ success: false, error: `Task not found: ${taskName}` });
         return;
       }
 
@@ -269,12 +230,12 @@ export function HookUnlinkCommand({
         updatedHooks[type] = hooks.filter((h) => h !== hookId);
       }
 
-      store.updateTask(taskId, { hooks: updatedHooks });
+      store.updateTask(taskName, { hooks: updatedHooks });
       setResult({ success: true });
     } catch (e) {
       setResult({ success: false, error: e instanceof Error ? e.message : 'Unknown error' });
     }
-  }, [library, store, args]);
+  }, [store, args]);
 
   if (result.error) {
     return (

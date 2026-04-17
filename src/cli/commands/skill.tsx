@@ -1,41 +1,36 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Text } from 'ink';
-import { LibraryStore, Skill } from '../../library/store.js';
+import { GlobalLibraryStore, GlobalSkill } from '../../global-library/store.js';
 import { TaskStore } from '../../task/store.js';
 
 interface SkillCommandProps {
-  library: LibraryStore | null;
   store: TaskStore | null;
   args: Record<string, unknown>;
 }
 
-export function SkillAddCommand({ library, args }: SkillCommandProps) {
-  const [result, setResult] = useState<{ success: boolean; skill?: Skill; error?: string }>({
+export function SkillAddCommand({ args }: SkillCommandProps) {
+  const [result, setResult] = useState<{ success: boolean; error?: string }>({
     success: false,
   });
 
   useEffect(() => {
-    if (!library) {
-      setResult({ success: false, error: 'Not in a workspace' });
-      return;
-    }
+    const globalLib = new GlobalLibraryStore();
+    globalLib.ensureDirectories();
 
     const name = args._[2] as string | undefined;
     if (!name) {
-      setResult({ success: false, error: 'Usage: tharness skill add <name>' });
+      setResult({ success: false, error: 'Usage: tharness global skill add <source-path>' });
       return;
     }
 
     try {
-      const skill = library.createSkill({
-        name,
-        description: (args.description || args.d) as string | undefined,
-      });
-      setResult({ success: true, skill });
+      const sourcePath = name; // The name is actually the source path
+      const skill = globalLib.installSkill(sourcePath);
+      setResult({ success: true });
     } catch (e) {
       setResult({ success: false, error: e instanceof Error ? e.message : 'Unknown error' });
     }
-  }, [library, args]);
+  }, [args]);
 
   if (result.error) {
     return (
@@ -47,59 +42,42 @@ export function SkillAddCommand({ library, args }: SkillCommandProps) {
     );
   }
 
-  if (!result.skill) {
-    return (
-      <Box padding={1}>
-        <Text dimColor>Creating skill...</Text>
-      </Box>
-    );
-  }
-
   return (
     <Box flexDirection="column" padding={1}>
       <Box>
         <Text color="green">✓</Text>
-        <Text> Created skill </Text>
-        <Text color="cyan">{result.skill.id}</Text>
-      </Box>
-      <Box flexDirection="column" marginTop={1} paddingLeft={2}>
-        <Text>Name: {result.skill.name}</Text>
-        <Text dimColor>File: library/skills/{result.skill.id}.yaml</Text>
+        <Text> Skill installed to global library</Text>
       </Box>
       <Box marginTop={1}>
-        <Text dimColor>Edit the skill file to add triggers, commands, and content.</Text>
+        <Text dimColor>Skills are stored in ~/.claude/skills/</Text>
       </Box>
     </Box>
   );
 }
 
-export function SkillListCommand({ library, args }: SkillCommandProps) {
-  const [output, setOutput] = useState<{ categories?: { name: string; count: number }[]; skills?: Skill[]; pagination?: { page: number; totalPages: number; total: number }; error?: string }>({});
+export function SkillListCommand({ args }: SkillCommandProps) {
+  const [output, setOutput] = useState<{ categories?: { name: string; count: number }[]; skills?: GlobalSkill[]; pagination?: { page: number; totalPages: number; total: number }; error?: string }>({});
 
   useEffect(() => {
-    if (!library) {
-      setOutput({ error: 'Not in a workspace' });
-      return;
-    }
-
     try {
+      const globalLib = new GlobalLibraryStore();
       const category = args.category as string | undefined;
       const search = args.search as string | undefined;
       const page = args.page ? parseInt(args.page as string, 10) : 1;
 
       if (category || search) {
         // Show filtered/paginated skills
-        const result = library.listSkillsByCategory(category || undefined, { search, page });
+        const result = globalLib.listSkillsByCategory(category || 'all', { search, page });
         setOutput({ skills: result.skills, pagination: { page: result.page, totalPages: result.totalPages, total: result.total } });
       } else {
         // Show all categories
-        const categories = library.listCategories();
+        const categories = globalLib.listSkillCategories();
         setOutput({ categories });
       }
     } catch (e) {
       setOutput({ error: e instanceof Error ? e.message : 'Unknown error' });
     }
-  }, [library, args]);
+  }, [args]);
 
   if (output.error) {
     return (
@@ -113,7 +91,7 @@ export function SkillListCommand({ library, args }: SkillCommandProps) {
 
   return (
     <Box flexDirection="column" padding={1}>
-      <Text bold>Skills</Text>
+      <Text bold>Global Skills</Text>
       {output.categories && (
         <Box flexDirection="column" marginTop={1}>
           <Text dimColor>Categories:</Text>
@@ -125,7 +103,7 @@ export function SkillListCommand({ library, args }: SkillCommandProps) {
             </Box>
           ))}
           <Box marginTop={1}>
-            <Text dimColor>Use: tharness skill list --category &lt;name&gt; [--search &lt;query&gt;] [--page &lt;n&gt;]</Text>
+            <Text dimColor>Use: tharness global skill list --category &lt;name&gt; [--search &lt;query&gt;] [--page &lt;n&gt;]</Text>
           </Box>
         </Box>
       )}
@@ -158,48 +136,34 @@ export function SkillListCommand({ library, args }: SkillCommandProps) {
   );
 }
 
-export function SkillLinkCommand({
-  library,
-  store,
-  args,
-}: {
-  library: LibraryStore | null;
-  store: TaskStore | null;
-  args: Record<string, unknown>;
-}) {
+export function SkillLinkCommand({ store, args }: SkillCommandProps) {
   const [result, setResult] = useState<{ success: boolean; error?: string }>({
     success: false,
   });
 
   useEffect(() => {
-    if (!library || !store) {
-      setResult({ success: false, error: 'Not in a workspace' });
+    if (!store) {
+      setResult({ success: false, error: 'Store not available' });
       return;
     }
 
     const skillId = args._[2] as string | undefined;
-    const taskId = (args._[3] as string | undefined) || store.getConfig().active_task;
+    const taskName = args._[3] as string | undefined;
 
     if (!skillId) {
-      setResult({ success: false, error: 'Usage: tharness skill link <skill-id> [task-id]' });
+      setResult({ success: false, error: 'Usage: tharness skill link <skill-id> [task-name]' });
       return;
     }
 
-    if (!taskId) {
-      setResult({ success: false, error: 'No active task. Specify task-id or activate a task first.' });
+    if (!taskName) {
+      setResult({ success: false, error: 'Usage: tharness skill link <skill-id> [task-name]' });
       return;
     }
 
     try {
-      const skill = library.getSkill(skillId);
-      if (!skill) {
-        setResult({ success: false, error: `Skill not found: ${skillId}` });
-        return;
-      }
-
-      const task = store.getTask(taskId);
+      const task = store.getTask(taskName);
       if (!task) {
-        setResult({ success: false, error: `Task not found: ${taskId}` });
+        setResult({ success: false, error: `Task not found: ${taskName}` });
         return;
       }
 
@@ -209,12 +173,12 @@ export function SkillLinkCommand({
         { skill: skillId, version: '1.0', enabled: true },
       ];
 
-      store.updateTask(taskId, { skills: updatedSkills });
+      store.updateTask(taskName, { skills: updatedSkills });
       setResult({ success: true });
     } catch (e) {
       setResult({ success: false, error: e instanceof Error ? e.message : 'Unknown error' });
     }
-  }, [library, store, args]);
+  }, [store, args]);
 
   if (result.error) {
     return (
@@ -236,53 +200,45 @@ export function SkillLinkCommand({
   );
 }
 
-export function SkillUnlinkCommand({
-  library,
-  store,
-  args,
-}: {
-  library: LibraryStore | null;
-  store: TaskStore | null;
-  args: Record<string, unknown>;
-}) {
+export function SkillUnlinkCommand({ store, args }: SkillCommandProps) {
   const [result, setResult] = useState<{ success: boolean; error?: string }>({
     success: false,
   });
 
   useEffect(() => {
-    if (!library || !store) {
-      setResult({ success: false, error: 'Not in a workspace' });
+    if (!store) {
+      setResult({ success: false, error: 'Store not available' });
       return;
     }
 
     const skillId = args._[2] as string | undefined;
-    const taskId = (args._[3] as string | undefined) || store.getConfig().active_task;
+    const taskName = args._[3] as string | undefined;
 
     if (!skillId) {
-      setResult({ success: false, error: 'Usage: tharness skill unlink <skill-id> [task-id]' });
+      setResult({ success: false, error: 'Usage: tharness skill unlink <skill-id> [task-name]' });
       return;
     }
 
-    if (!taskId) {
-      setResult({ success: false, error: 'No active task. Specify task-id or activate a task first.' });
+    if (!taskName) {
+      setResult({ success: false, error: 'Usage: tharness skill unlink <skill-id> [task-name]' });
       return;
     }
 
     try {
-      const task = store.getTask(taskId);
+      const task = store.getTask(taskName);
       if (!task) {
-        setResult({ success: false, error: `Task not found: ${taskId}` });
+        setResult({ success: false, error: `Task not found: ${taskName}` });
         return;
       }
 
       // Remove skill from task
       const updatedSkills = task.skills.filter((s) => s.skill !== skillId);
-      store.updateTask(taskId, { skills: updatedSkills });
+      store.updateTask(taskName, { skills: updatedSkills });
       setResult({ success: true });
     } catch (e) {
       setResult({ success: false, error: e instanceof Error ? e.message : 'Unknown error' });
     }
-  }, [library, store, args]);
+  }, [store, args]);
 
   if (result.error) {
     return (
