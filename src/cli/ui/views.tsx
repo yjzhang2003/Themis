@@ -747,7 +747,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
 
   // Skill Select (for linking to task)
   if (view === 'skill-select' && selectedTaskId) {
-    const skills = library.listSkills();
+    const skills = globalLibrary.listSkills();
     const task = store.getTask(selectedTaskId);
     const linkedSkillIds = task?.skills.map((s) => s.skill) || [];
 
@@ -846,7 +846,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
 
   // Hook Select (for linking to task)
   if (view === 'hook-select' && selectedTaskId) {
-    const hooks = library.listHooks();
+    const hooks = globalLibrary.listHooks();
     const task = store.getTask(selectedTaskId);
     const linkedHookIds = Object.values(task?.hooks || {}).flat();
 
