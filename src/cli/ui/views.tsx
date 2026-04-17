@@ -921,7 +921,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
   );
 }
 
-// Confirm Dialog Component
+// Confirm Dialog Component - uses ListBox
 function ConfirmView({
   title,
   message,
@@ -933,49 +933,6 @@ function ConfirmView({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const [selected, setSelected] = useState(0); // 0 = Cancel, 1 = Confirm
-
-  useEffect(() => {
-    const handleData = (s: string | Buffer) => {
-      const data = typeof s === 'string' ? s : s.toString();
-      const key = data.trim();
-      if (key === '\u0003') {
-        onCancel();
-        return;
-      }
-      if (key === 'y' || key === 'Y' || key === '1') {
-        setSelected(1);
-      } else if (key === 'n' || key === 'N' || key === '0') {
-        setSelected(0);
-      } else if (key === '\r' || key === '\n') {
-        if (selected === 1) {
-          onConfirm();
-        } else {
-          onCancel();
-        }
-      } else if (key === '\u001b' || key === 'q' || key === 'Q') {
-        onCancel();
-      }
-    };
-
-    try {
-      process.stdin.setRawMode?.(true);
-      process.stdin.resume?.();
-      process.stdin.on?.('data', handleData);
-    } catch {
-      // Raw mode not supported
-    }
-
-    return () => {
-      try {
-        process.stdin.removeListener?.('data', handleData);
-        process.stdin.setRawMode?.(false);
-      } catch {
-        // Ignore
-      }
-    };
-  }, [selected, onConfirm, onCancel]);
-
   return (
     <Box flexDirection="column" flexGrow={1}>
       <Box borderStyle="bold" padding={1} marginBottom={1}>
@@ -984,14 +941,27 @@ function ConfirmView({
       <Box padding={1}>
         <Text>{message}</Text>
       </Box>
-      <Box padding={1}>
-        <Text>
-          <Text color={selected === 0 ? 'cyan' : undefined}>[{selected === 0 ? '●' : ' '}] No, cancel  </Text>
-          <Text color={selected === 1 ? 'cyan' : undefined}>[{selected === 1 ? '●' : ' '}] Yes, delete</Text>
-        </Text>
-      </Box>
+
+      <ListBox
+        items={[
+          {
+            id: 'cancel',
+            label: 'Cancel',
+            description: 'Go back without changes',
+            onSelect: onCancel,
+          },
+          {
+            id: 'confirm',
+            label: 'Confirm',
+            description: 'Proceed with action',
+            onSelect: onConfirm,
+          },
+        ]}
+        onBack={onCancel}
+      />
+
       <Box marginTop={1} paddingX={1}>
-        <Text dimColor>[y/n] or [0/1] to select  [Enter] confirm  [q/Esc] cancel</Text>
+        <Text dimColor>[↑↓] Navigate  [Enter] Select  [Esc] Cancel</Text>
       </Box>
     </Box>
   );
