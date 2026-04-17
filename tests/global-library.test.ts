@@ -14,10 +14,10 @@ describe('GlobalLibraryStore', () => {
   beforeEach(() => {
     // Set temp HOME for tests
     process.env.HOME = testBaseDir;
-    // Create test directory structure
-    mkdirSync(join(testBaseDir, '.claude', 'library', 'skills'), { recursive: true });
-    mkdirSync(join(testBaseDir, '.claude', 'library', 'hooks'), { recursive: true });
-    mkdirSync(join(testBaseDir, '.claude', 'library', 'rules'), { recursive: true });
+    // Create test directory structure - skills, hooks, rules are directly under ~/.claude/
+    mkdirSync(join(testBaseDir, '.claude', 'skills'), { recursive: true });
+    mkdirSync(join(testBaseDir, '.claude', 'hooks'), { recursive: true });
+    mkdirSync(join(testBaseDir, '.claude', 'rules'), { recursive: true });
   });
 
   afterEach(() => {
@@ -34,7 +34,7 @@ describe('GlobalLibraryStore', () => {
   describe('constructor and paths', () => {
     it('creates GlobalLibraryStore with correct global path', () => {
       const store = new GlobalLibraryStore();
-      expect(store.getGlobalPath()).toBe(join(process.env.HOME!, '.claude', 'library'));
+      expect(store.getGlobalPath()).toBe(join(process.env.HOME!, '.claude'));
     });
   });
 

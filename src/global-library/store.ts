@@ -37,7 +37,8 @@ export class GlobalLibraryStore {
   private globalPath: string;
 
   constructor() {
-    this.globalPath = join(homedir(), '.claude', 'library');
+    // Claude Code stores skills, hooks, rules directly under ~/.claude/
+    this.globalPath = join(homedir(), '.claude');
   }
 
   getGlobalPath(): string {
@@ -45,6 +46,7 @@ export class GlobalLibraryStore {
   }
 
   ensureDirectories(): void {
+    // Ensure the standard Claude Code directories exist
     mkdirSync(join(this.globalPath, 'skills'), { recursive: true });
     mkdirSync(join(this.globalPath, 'hooks'), { recursive: true });
     mkdirSync(join(this.globalPath, 'rules'), { recursive: true });
