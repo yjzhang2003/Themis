@@ -1085,21 +1085,20 @@ function TaskCreateView({
   useEffect(() => {
     const handleData = (s: string | Buffer) => {
       const data = typeof s === 'string' ? s : s.toString();
-      const key = data.trim();
-      if (s === '\u0003') {
+      if (data === '\u0003') {
         onCancel();
         return;
       }
-      if (key === '\u001b' || key === 'q' || key === 'Q') {
+      if (data === '\u001b' || data === 'q' || data === 'Q') {
         onCancel();
-      } else if (key === '\r' || key === '\n') {
+      } else if (data === '\r' || data === '\n') {
         if (name.trim()) {
           onSubmit(name.trim());
         }
-      } else if (key === '\b' || key === '\u007f') {
+      } else if (data === '\b' || data === '\u007f') {
         setName((n) => n.slice(0, -1));
-      } else if (key.length === 1) {
-        setName((n) => n + key);
+      } else if (data.length === 1 && !data.match(/\s/)) {
+        setName((n) => n + data);
       }
     };
 
