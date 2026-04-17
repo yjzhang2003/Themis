@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Text } from 'ink';
 
 export interface SelectableItem {
@@ -37,104 +37,82 @@ export function ListBox({
     setSelectedIndex(initialIndex);
   }, [items, initialIndex]);
 
-  const handleToggleSelect = useCallback(
-    (id: string) => {
-      if (onToggleSelect && multiSelect) {
-        onToggleSelect(id);
-        // Move to next item after selection
-        setSelectedIndex((prev) => Math.min(items.length - 1, prev + 1));
-      }
-    },
-    [onToggleSelect, multiSelect, items.length]
-  );
-
+  // Handle keyboard input via readline-like interface
   useEffect(() => {
-    // Set raw mode for terminal input
-    try {
-      process.stdin.setRawMode?.(true);
-    } catch {
-      // Raw mode not supported
-    }
+    if (typeof process.stdin.on === 'function') {
+      const handleKeypress = (s: string | Buffer) => {
+        const data = typeof s === 'string' ? s : s.toString();
 
-    const handleData = (s: string | Buffer) => {
-      const data = typeof s === 'string' ? s : s.toString();
-      const key = data.trim();
-      const rawKey = data;
-
-      if (s === '\u0003') {
-        // Ctrl+C - always exit
-        return;
-      }
-
-      // Escape - go back
-      if (key === '\u001b') {
-        if (onBack) {
-          onBack();
+        if (data === '\u0003') {
+          // Ctrl+C
+          return;
         }
-        return;
-      }
 
-      // Arrow Up or k - move up
-      if (key === '\u001b[A' || key === 'k') {
-        setSelectedIndex((prev) => Math.max(0, prev - 1));
-        return;
-      }
-
-      // Arrow Down or j - move down
-      if (key === '\u001b[B' || key === 'j') {
-        setSelectedIndex((prev) => Math.min(items.length - 1, prev + 1));
-        return;
-      }
-
-      // Arrow Left or n - previous page
-      if (rawKey === '\u001b[D' || key === 'n') {
-        if (onPrevPage) {
-          onPrevPage();
+        // Escape - go back
+        if (data === '\u001b' || data === '\u001b[D') {
+          if (onBack) onBack();
+          return;
         }
-        return;
-      }
 
-      // Arrow Right or l - next page
-      if (rawKey === '\u001b[C' || key === 'l') {
-        if (onNextPage) {
-          onNextPage();
+        // Arrow Up or k
+        if (data === '\u001b[A' || data === 'k') {
+          setSelectedIndex((prev) => Math.max(0, prev - 1));
+          return;
         }
-        return;
-      }
 
-      // Space - toggle selection (multi-select mode)
-      if (key === ' ') {
-        if (multiSelect && items[selectedIndex]) {
-          handleToggleSelect(items[selectedIndex].id);
+        // Arrow Down or j
+        if (data === '\u001b[B' || data === 'j') {
+          setSelectedIndex((prev) => Math.min(items.length - 1, prev + 1));
+          return;
         }
-        return;
-      }
 
-      // Enter - confirm selection
-      if (key === '\r' || key === '\n') {
-        if (items[selectedIndex]) {
-          items[selectedIndex].onSelect();
+        // Arrow Left or n - prev page
+        if (data === '\u001b[D' || data === 'n') {
+          if (onPrevPage) onPrevPage();
+          return;
         }
-        return;
-      }
-    };
 
-    try {
-      process.stdin.resume?.();
-      process.stdin.on?.('data', handleData);
-    } catch {
-      // Resume/input not supported
-    }
+        // Arrow Right or l - next page
+        if (data === '\u001b[C' || data === 'l') {
+          if (onNextPage) onNextPage();
+          return;
+        }
 
-    return () => {
+        // Space - toggle multi-select
+        if (data === ' ') {
+          if (multiSelect && items[selectedIndex] && onToggleSelect) {
+            onToggleSelect(items[selectedIndex].id);
+            setSelectedIndex((prev) => Math.min(items.length - 1, prev + 1));
+          }
+          return;
+        }
+
+        // Enter - select
+        if (data === '\r' || data === '\n') {
+          if (items[selectedIndex]) {
+            items[selectedIndex].onSelect();
+          }
+          return;
+        }
+      };
+
       try {
-        process.stdin.removeListener?.('data', handleData);
-        process.stdin.setRawMode?.(false);
+        process.stdin.setRawMode?.(true);
+        process.stdin.on?.('keypress', handleKeypress);
       } catch {
-        // Ignore
+        // stdin not available
       }
-    };
-  }, [items, selectedIndex, onBack, onNextPage, onPrevPage, multiSelect, handleToggleSelect]);
+
+      return () => {
+        try {
+          process.stdin.removeListener?.('keypress', handleKeypress);
+          process.stdin.setRawMode?.(false);
+        } catch {
+          // ignore
+        }
+      };
+    }
+  }, [items, selectedIndex, onBack, onNextPage, onPrevPage, multiSelect, onToggleSelect]);
 
   if (items.length === 0) {
     return (
@@ -149,7 +127,6 @@ export function ListBox({
       {items.map((item, index) => {
         const isSelected = index === selectedIndex;
         const isMultiSelected = selectedIds.includes(item.id);
-        // Truncate description to max width (terminal width minus prefix and padding)
         const maxDescWidth = 60;
         const descText = item.description?.split('\n')[0] || '';
         const truncatedDesc = descText.length > maxDescWidth
@@ -161,7 +138,6 @@ export function ListBox({
             paddingY={0}
             onSelect={() => {
               setSelectedIndex(index);
-              // Small delay to allow visual feedback
               setTimeout(() => item.onSelect(), 50);
             }}
           >
