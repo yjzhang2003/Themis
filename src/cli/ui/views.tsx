@@ -13,6 +13,7 @@ type View =
   | 'global-skills'
   | 'global-skills-category'
   | 'global-hooks'
+  | 'global-hooks-type'
   | 'global-rules'
   | 'tasks'
   | 'task-detail'
@@ -45,6 +46,7 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
   const [selectedHookId, setSelectedHookId] = useState<string | null>(null);
+  const [selectedHookType, setSelectedHookType] = useState<string>('all');
   const [refreshKey, setRefreshKey] = useState(0);
   const [skillCategory, setSkillCategory] = useState<string>('all');
   const [skillPage, setSkillPage] = useState(1);
@@ -247,24 +249,27 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
     );
   }
 
-  // Global Hooks List
+  // Global Hooks List - show by type
   if (view === 'global-hooks') {
-    const hooks = globalLibrary.listHooks();
+    const hooksByType = globalLibrary.listHooksByType();
+    const hookTypes = Object.keys(hooksByType).filter(t => hooksByType[t].length > 0);
 
     return (
       <Box key="global-hooks" flexDirection="column" flexGrow={1}>
         <Box borderStyle="bold" padding={1} marginBottom={1}>
           <Text bold>GLOBAL HOOKS</Text>
+          <Text dimColor> - by type</Text>
         </Box>
 
         <ListBox
           key={`global-hooks-${refreshKey}`}
-          items={hooks.map((h) => ({
-            id: h.id,
-            label: h.name,
-            description: `[${h.type}] ${h.command.substring(0, 40)}`,
+          items={hookTypes.map((type) => ({
+            id: type,
+            label: type,
+            description: `${hooksByType[type].length} hook${hooksByType[type].length !== 1 ? 's' : ''}`,
             onSelect: () => {
-              setSelectedHookId(h.id);
+              setSelectedHookType(type);
+              setView('global-hooks-type');
             },
           }))}
           onBack={() => setView('global-resources')}
@@ -272,6 +277,38 @@ export function InteractiveApp({ store, library, onQuit }: InteractiveAppProps) 
 
         <Box marginTop={1} flexDirection="column">
           <Text dimColor>[Esc] Back to Global Resources</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Global Hooks by Type
+  if (view === 'global-hooks-type') {
+    const hooksByType = globalLibrary.listHooksByType();
+    const hooks = selectedHookType ? (hooksByType[selectedHookType] || []) : [];
+
+    return (
+      <Box key="global-hooks-type" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>GLOBAL HOOKS</Text>
+          <Text dimColor> - {selectedHookType}</Text>
+        </Box>
+
+        <ListBox
+          key={`global-hooks-type-${refreshKey}`}
+          items={hooks.map((h) => ({
+            id: h.id,
+            label: h.name,
+            description: h.matcher ? `Matcher: ${h.matcher}` : h.command.substring(0, 50),
+            onSelect: () => {
+              // Could show hook detail or confirm remove
+            },
+          }))}
+          onBack={() => setView('global-hooks')}
+        />
+
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor>[Esc] Back to Hook Types</Text>
         </Box>
       </Box>
     );

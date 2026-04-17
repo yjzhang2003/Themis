@@ -209,7 +209,7 @@ export class GlobalLibraryStore {
       const hooks: GlobalHook[] = [];
 
       // hooks.json has structure: { hooks: { PreToolUse: [...], PostToolUse: [...], Stop: [...] } }
-      const hookTypes = ['PreToolUse', 'PostToolUse', 'Stop'] as const;
+      const hookTypes = ['PreToolUse', 'PostToolUse', 'Stop', 'SessionStart', 'SessionEnd', 'PreCompact'] as const;
 
       for (const hookType of hookTypes) {
         const hooksList = parsed.hooks?.[hookType] || [];
@@ -234,26 +234,96 @@ export class GlobalLibraryStore {
     }
   }
 
+  listHooksByType(): Record<string, GlobalHook[]> {
+    const hooks = this.listHooks();
+    const byType: Record<string, GlobalHook[]> = {};
+
+    for (const hook of hooks) {
+      if (!byType[hook.type]) {
+        byType[hook.type] = [];
+      }
+      byType[hook.type].push(hook);
+    }
+
+    return byType;
+  }
+
   getHook(id: string): GlobalHook | null {
     const hooks = this.listHooks();
     return hooks.find(h => h.id === id) || null;
   }
 
-  installHook(sourcePath: string, name?: string): GlobalHook {
-    // For now, hooks are managed in hooks.json - this is a no-op for installation
-    const id = name || basename(sourcePath, '.yaml');
-    return this.getHook(id) || {
+  installHook(sourcePath: string, id: string, type: string = 'PostToolUse', matcher?: string, description?: string): GlobalHook {
+    const hooksPath = join(this.globalPath, 'hooks', 'hooks.json');
+    let parsed = { hooks: {} as Record<string, unknown[]> };
+
+    if (existsSync(hooksPath)) {
+      try {
+        const content = readFileSync(hooksPath, 'utf-8');
+        parsed = JSON.parse(content);
+      } catch {}
+    }
+
+    // Ensure hooks array exists for this type
+    if (!parsed.hooks[type]) {
+      parsed.hooks[type] = [];
+    }
+
+    // Create new hook entry
+    const newHook = {
       id,
-      name: id,
-      type: 'PostToolUse' as const,
-      command: '',
+      matcher: matcher || 'Bash',
+      hooks: [{ type: 'command', command: sourcePath }],
+      description: description || id,
+    };
+
+    parsed.hooks[type].push(newHook);
+
+    // Write back to hooks.json
+    writeFileSync(hooksPath, JSON.stringify(parsed, null, 2));
+
+    return {
+      id,
+      name: description || id,
+      type: type as GlobalHook['type'],
+      command: sourcePath,
+      matcher,
+      description,
       created_at: new Date().toISOString(),
     };
   }
 
   removeHook(id: string): boolean {
-    // For now, hooks are managed in hooks.json - this is a no-op for removal
-    return false;
+    const hooksPath = join(this.globalPath, 'hooks', 'hooks.json');
+    if (!existsSync(hooksPath)) return false;
+
+    try {
+      const content = readFileSync(hooksPath, 'utf-8');
+      const parsed = JSON.parse(content);
+
+      let found = false;
+      const hookTypes = ['PreToolUse', 'PostToolUse', 'Stop', 'SessionStart', 'SessionEnd', 'PreCompact'] as const;
+
+      for (const hookType of hookTypes) {
+        const hooksList = parsed.hooks?.[hookType] || [];
+        const index = hooksList.findIndex((h: { id?: string }) => h.id === id);
+        if (index !== -1) {
+          hooksList.splice(index, 1);
+          parsed.hooks[hookType] = hooksList;
+          found = true;
+          break;
+        }
+      }
+
+      if (found) {
+        writeFileSync(hooksPath, JSON.stringify(parsed, null, 2));
+        return true;
+      }
+
+      return false;
+    } catch {
+      return false;
+    }
   }
 
   // Rules

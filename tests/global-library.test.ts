@@ -286,20 +286,70 @@ Description.
   });
 
   describe('installHook', () => {
-    it('returns placeholder hook (hooks managed via hooks.json)', () => {
+    it('adds hook to hooks.json', () => {
       const store = new GlobalLibraryStore();
-      const hook = store.installHook('/some/path', 'test-hook');
-      // Hooks are managed via hooks.json, not individual files
+      const hooksPath = join(store.getGlobalPath(), 'hooks', 'hooks.json');
+
+      const hook = store.installHook('echo "test"', 'test-hook', 'PostToolUse', 'Bash', 'Test hook');
+
       expect(hook.id).toBe('test-hook');
+      expect(hook.type).toBe('PostToolUse');
+      expect(hook.command).toBe('echo "test"');
+
+      // Verify it was written to hooks.json
+      const content = JSON.parse(readFileSync(hooksPath, 'utf-8'));
+      expect(content.hooks.PostToolUse.some((h: { id: string }) => h.id === 'test-hook')).toBe(true);
     });
   });
 
   describe('removeHook', () => {
-    it('returns false (hooks managed via hooks.json)', () => {
+    it('removes hook from hooks.json', () => {
       const store = new GlobalLibraryStore();
-      // Hooks are managed via hooks.json, removal not supported
-      const removed = store.removeHook('any-hook');
+      const hooksPath = join(store.getGlobalPath(), 'hooks', 'hooks.json');
+
+      // First install a hook
+      store.installHook('echo "test"', 'to-remove-hook', 'PostToolUse', 'Bash', 'To remove');
+
+      // Verify it exists
+      expect(store.getHook('to-remove-hook')).not.toBeNull();
+
+      // Remove it
+      const removed = store.removeHook('to-remove-hook');
+      expect(removed).toBe(true);
+
+      // Verify it's gone
+      expect(store.getHook('to-remove-hook')).toBeNull();
+    });
+
+    it('returns false for non-existent hook', () => {
+      const store = new GlobalLibraryStore();
+      const removed = store.removeHook('non-existent-hook');
       expect(removed).toBe(false);
+    });
+  });
+
+  describe('listHooksByType', () => {
+    it('groups hooks by type', () => {
+      const store = new GlobalLibraryStore();
+      const hooksPath = join(store.getGlobalPath(), 'hooks', 'hooks.json');
+
+      // Write a hooks.json with different types
+      writeFileSync(hooksPath, JSON.stringify({
+        hooks: {
+          PreToolUse: [{ id: 'pre-hook', matcher: 'Bash', hooks: [{ type: 'command', command: 'echo pre' }], description: 'Pre hook' }],
+          PostToolUse: [{ id: 'post-hook', matcher: 'Bash', hooks: [{ type: 'command', command: 'echo post' }], description: 'Post hook' }],
+          Stop: [{ id: 'stop-hook', matcher: '', hooks: [{ type: 'command', command: 'echo stop' }], description: 'Stop hook' }]
+        }
+      }));
+
+      const byType = store.listHooksByType();
+
+      expect(byType.PreToolUse).toHaveLength(1);
+      expect(byType.PreToolUse[0].id).toBe('pre-hook');
+      expect(byType.PostToolUse).toHaveLength(1);
+      expect(byType.PostToolUse[0].id).toBe('post-hook');
+      expect(byType.Stop).toHaveLength(1);
+      expect(byType.Stop[0].id).toBe('stop-hook');
     });
   });
 
