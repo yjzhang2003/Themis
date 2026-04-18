@@ -8,78 +8,78 @@
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Development-orange.svg)]()
 
-**⚠️ 开发中 · 暂不可用于生产环境**
+**[简体中文](./README_zh.md)** · ⚠️ In Development · Not Ready for Production
 
 </div>
 
 ---
 
-## 项目状态
+## Project Status
 
-**Themis** 目前仍在积极开发中，尚未稳定，**不建议在生产环境中使用**。
+**Themis is still in active development and is NOT stable. Do NOT use in production.**
 
-### 已实现功能 ✅
+### Implemented ✅
 
-目前仅完成了 **Claude Code Task 隔离** 这一核心特性的实现：
+Only the **Claude Code Task Isolation** core feature is implemented:
 
-- **Per-task `.claude/` 隔离**：每个任务拥有独立的 Claude Code 配置目录
-- **全局 Skills/Hooks 库**：在全局库中管理的 Skills 和 Hooks 可绑定到任意任务
-- **基础 CLI**：INK TUI 界面和命令行工具
+- **Per-task `.claude/` isolation**: Each task has its own Claude Code config directory
+- **Global Skills/Hooks library**: Skills and Hooks managed in global library can be bound to any task
+- **Basic CLI**: INK TUI interface and command-line tool
 
-### 开发中的功能 🔨
+### In Development 🔨
 
-以下功能正在开发中，尚未完成：
+The following features are being developed:
 
-- 自动任务解析（根据任务描述自动规划执行步骤）
-- Skills/Hooks 分类装载（根据任务类型智能加载相关技能）
-- 任务流程优化（多阶段任务的状态管理与断点续传）
-- OpenSpec 深度集成（任务与项目规范的自动绑定）
+- Automatic task parsing (auto-plan execution steps from task description)
+- Skills/Hooks categorized loading (intelligent loading based on task type)
+- Task flow optimization (multi-phase task state management and checkpoint resume)
+- Deep OpenSpec integration (auto-binding tasks to project specifications)
 
-### 计划中的功能 📋
+### Planned 📋
 
-以下功能在路线图中，尚未开始实现：
+The following features are on the roadmap, not yet started:
 
-- **Codex 支持**：支持 Anthropic 的 Codex CLI 作为另一个 Agent 后端
-- **多 CLI 协作**：支持 Claude Code、Codex 等多种 CLI 协同工作
-- **Supervisor 完全体**：全自动任务监控、自动修复、人工审核队列
-- **24×7 tmux 会话**：持久化运行、断开重连、跨会话上下文恢复
-
----
-
-## 解决的问题
-
-大型语言模型辅助开发面临一个核心矛盾：**任务持久化与上下文隔离**。
-
-- 当一个 Claude Code 会话运行数十个任务时，上下文相互污染
-- 当任务切换时，技能、钩子、规则无法复用
-- 当会话中断时，进度丢失，无法续恢复
-- 当任务卡死时，需要人工干预才能重启
-
-**Themis** 以古希腊正义女神命名，取其"秩序"与"裁决"之意——为每个任务建立独立的执行空间，自主监控其生命周期，让 AI 开发流持续运转。
+- **Codex support**: Support Anthropic's Codex CLI as another Agent backend
+- **Multi-CLI collaboration**: Support Claude Code, Codex, and other CLIs working together
+- **Full Supervisor**: Automated task monitoring, auto-repair, human review queue
+- **24×7 tmux sessions**: Persistent operation, reconnect on disconnect, cross-session context recovery
 
 ---
 
-## 核心特性
+## The Problem We Solve
 
-### Per-Task 隔离空间
+Large language model-assisted development faces a core contradiction: **task persistence vs. context isolation**.
 
-每个任务拥有独立的 `.claude/` 目录，包含：
+- When one Claude Code session runs dozens of tasks, contexts contaminate each other
+- When switching tasks, skills, hooks, and rules cannot be reused
+- When a session is interrupted, progress is lost with no way to resume
+- When a task hangs, manual intervention is required to restart
+
+**Themis**, named after the Greek goddess of justice and divine order, brings order to AI-driven development—establishing isolated execution spaces for each task and autonomously monitoring their lifecycles.
+
+---
+
+## Features
+
+### Per-Task Isolation
+
+Each task owns a dedicated `.claude/` directory:
 
 ```
 task-001/
 ├── .claude/
-│   ├── skills/      # 任务专属技能
-│   ├── hooks/      # 任务专属钩子
-│   └── rules/      # 任务专属规则
-├── src/            # 任务代码
-└── task.yaml       # 任务元数据
+│   ├── skills/      # Task-specific skills
+│   ├── hooks/       # Task-specific hooks
+│   └── rules/       # Task-specific rules
+├── src/             # Task code
+└── task.yaml       # Task metadata
 ```
 
-Launcher 为每个任务在 `/tmp` 下创建隔离的 HOME 目录，防止配置污染。
+The Launcher creates an isolated HOME directory under `/tmp` to prevent configuration pollution.
 
-### 全局技能库
+### Global Skill Library
 
-技能、钩子、规则存储在全局库中，一次编写，处处复用：
+Skills, hooks, and rules live in a global library—write once, use everywhere:
 
 ```
 ~/.claude/
@@ -93,13 +93,13 @@ Launcher 为每个任务在 `/tmp` 下创建隔离的 HOME 目录，防止配置
 └── rules/
 ```
 
-### Supervisor 自主监控（开发中）
+### Supervisor Autonomous Loop (In Development)
 
-传统任务运行器只是"跑"，Supervisor 是"看"：
+Traditional task runners just "run"—Supervisor "watches":
 
-- **活跃度检测**：超过阈值无输出即判定为卡死
-- **自动重启**：冷却期 + 最大重试次数后进入人工审核队列
-- **状态持久化**：会话中断可完整恢复上下文
+- **Liveness Detection**: No output beyond threshold = hung
+- **Auto-Restart**: Cooldown + max retries before queuing for human review
+- **State Persistence**: Full context recovery after interruption
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -110,22 +110,22 @@ Launcher 为每个任务在 `/tmp` 下创建隔离的 HOME 目录，防止配置
 │  └────┬────┘    └────┬────┘    └────┬────┘│
 │       │              │              │      │
 │       └──────────────┴──────────────┘      │
-│              状态反馈循环 (开发中)            │
+│              State Feedback Loop (WIP)      │
 └─────────────────────────────────────────────┘
 ```
 
-### tmux 会话编排（计划中）
+### tmux Session Orchestration (Planned)
 
-任务运行在持久化的 tmux 会话中：
+Tasks run in persistent tmux sessions:
 
-- 断开 SSH 后任务继续运行
-- 会话日志完整捕获
-- 支持 attach/detach 切换
-- API 凭据自动合并
+- Continue running after SSH disconnect
+- Full session log capture
+- Attach/detach workflow
+- API credentials merged automatically
 
-### OpenSpec 集成（计划中）
+### OpenSpec Integration (Planned)
 
-任务可绑定到 OpenSpec capability，形成可追溯的开发链路：
+Tasks can bind to OpenSpec capabilities for traceable development:
 
 ```yaml
 openspec:
@@ -135,86 +135,86 @@ openspec:
 
 ---
 
-## 快速开始
+## Quick Start
 
-> ⚠️ **仅供测试**：本项目处于开发阶段，如果你不是 contributor 或测试者，请等待稳定版本发布。
+> ⚠️ **For Testing Only**: This project is in development. If you're not a contributor or tester, please wait for a stable release.
 
-### 安装依赖
+### Install Dependencies
 
 ```bash
 npm install
 ```
 
-### 初始化工作区
+### Initialize Workspace
 
 ```bash
 ./bin/themis.js init
 ```
 
-### 创建任务
+### Create a Task
 
 ```bash
-./bin/themis.js new "用户认证模块"
+./bin/themis.js new "User Authentication Module"
 ```
 
-### 交互式操作
+### Interactive Mode
 
 ```bash
-./bin/themis.js        # 启动 TUI 界面
+./bin/themis.js        # Launch TUI
 ```
 
 ---
 
-## 命令参考
+## Command Reference
 
-### 工作区
-
-```bash
-themis init              # 初始化工作区
-```
-
-### 任务管理
+### Workspace
 
 ```bash
-themis new <name>        # 创建新任务
-themis list              # 列出所有任务
-themis status [id]       # 查看任务状态
-themis activate <id>     # 激活任务（生成 .claude/）
+themis init              # Initialize workspace
 ```
 
-### 技能管理
+### Task Management
 
 ```bash
-themis skill add <name>            # 创建技能
-themis skill list                  # 列出所有技能
-themis skill link <id> [task-id]   # 绑定技能到任务
-themis skill unlink <id> [task-id] # 解绑技能
+themis new <name>        # Create new task
+themis list              # List all tasks
+themis status [id]       # View task status
+themis activate <id>     # Activate task (generate .claude/)
 ```
 
-### 钩子管理
+### Skill Management
 
 ```bash
-themis hook add <name> <type> --command <cmd>  # 创建钩子
-themis hook list                            # 列出所有钩子
-themis hook link <id> [task-id]           # 绑定钩子
-themis hook unlink <id> [task-id]         # 解绑钩子
+themis skill add <name>            # Create skill
+themis skill list                  # List all skills
+themis skill link <id> [task-id]   # Link skill to task
+themis skill unlink <id> [task-id] # Unlink skill
 ```
 
-**钩子类型**：`PreToolUse`, `PostToolUse`, `Stop`
+### Hook Management
+
+```bash
+themis hook add <name> <type> --command <cmd>  # Create hook
+themis hook list                            # List all hooks
+themis hook link <id> [task-id]           # Link hook
+themis hook unlink <id> [task-id]         # Unlink hook
+```
+
+**Hook Types**: `PreToolUse`, `PostToolUse`, `Stop`
 
 ---
 
-## 示例工作流
+## Example Workflow
 
 ```bash
-# 初始化
+# Initialize
 themis init
 
-# 创建技能和钩子
+# Create skills and hooks
 themis skill add tdd --description "Test-driven development"
 themis hook add format PostToolUse --command "prettier --write" --matcher "Write|Edit"
 
-# 创建任务并绑定
+# Create task and link resources
 themis new "API Feature"
 themis skill link tdd task-001
 themis hook link format task-001
@@ -223,7 +223,7 @@ themis activate task-001
 
 ---
 
-## 架构
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -252,72 +252,72 @@ themis activate task-001
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 组件说明
+### Component Map
 
-| 组件 | 状态 | 职责 |
-|------|------|------|
-| `cli/` | ✅ 完成 | INK TUI 和命令行接口 |
-| `task/` | ✅ 完成 | 任务存储和元数据管理 |
-| `global-library/` | ✅ 完成 | 全局技能/钩子/规则库 |
-| `openspec/` | 🔨 开发中 | OpenSpec 提案解析和绑定 |
-| `supervisor/` | 📋 计划中 | 自主监控循环和任务重启 |
+| Component | Status | Responsibility |
+|-----------|--------|----------------|
+| `cli/` | ✅ Done | INK TUI and command interface |
+| `task/` | ✅ Done | Task store and metadata |
+| `global-library/` | ✅ Done | Global skills/hooks/rules |
+| `openspec/` | 🔨 WIP | OpenSpec proposal parsing |
+| `supervisor/` | 📋 Planned | Autonomous monitoring loop |
 
 ---
 
-## 技术栈
+## Tech Stack
 
-| 层级 | 技术 |
-|------|------|
-| 运行时 | Node.js 20+ |
+| Layer | Technology |
+|-------|------------|
+| Runtime | Node.js 20+ |
 | CLI UI | INK 5.x (React for Terminal) |
-| 语言 | TypeScript 5.7 |
-| 数据验证 | Zod 3.24 |
-| 会话管理 | tmux |
-| 测试 | Vitest 4.1 |
-| 包管理 | npm |
+| Language | TypeScript 5.7 |
+| Data Validation | Zod 3.24 |
+| Session Management | tmux |
+| Testing | Vitest 4.1 |
+| Package Manager | npm |
 
 ---
 
-## 路线图
+## Roadmap
 
-### 已完成
+### Implemented
 
-- [x] Per-task `.claude/` 隔离
-- [x] 全局 Skills/Hooks/Rules 库
-- [x] 基础 CLI（TUI + 命令行）
+- [x] Per-task `.claude/` isolation
+- [x] Global Skills/Hooks/Rules library
+- [x] Basic CLI (TUI + command-line)
 
-### 开发中
+### In Development
 
-- [ ] 自动任务解析
-- [ ] Skills/Hooks 分类装载
-- [ ] 任务流程优化（状态管理、断点续传）
+- [ ] Automatic task parsing
+- [ ] Skills/Hooks categorized loading
+- [ ] Task flow optimization (state management, checkpoint resume)
 
-### 计划中
+### Planned
 
-- [ ] OpenSpec 深度集成
-- [ ] Codex CLI 支持
-- [ ] 多 CLI 协作
-- [ ] Supervisor 完全体
-- [ ] 24×7 tmux 会话
-
----
-
-## 贡献
-
-本项目欢迎贡献，但请注意：
-
-1. 本项目处于快速迭代阶段，API 可能有重大变更
-2. 请先提交 Issue 讨论重大更改
-3. PR 应包含充分的测试
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/amazing`)
-3. 提交更改 (`git commit -m 'Add amazing feature'`)
-4. 推送分支 (`git push origin feature/amazing`)
-5. 创建 Pull Request
+- [ ] Deep OpenSpec integration
+- [ ] Codex CLI support
+- [ ] Multi-CLI collaboration
+- [ ] Full Supervisor
+- [ ] 24×7 tmux sessions
 
 ---
 
-## 许可证
+## Contributing
+
+Contributions welcome, but note:
+
+1. This project is in rapid iteration; API may have breaking changes
+2. Please open an Issue to discuss major changes first
+3. PRs should include adequate tests
+
+1. Fork the repository
+2. Create your branch (`git checkout -b feature/amazing`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing`)
+5. Open a Pull Request
+
+---
+
+## License
 
 MIT License © 2026 Themis Team
