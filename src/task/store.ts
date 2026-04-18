@@ -88,9 +88,9 @@ export class TaskStore {
     return { ...task };
   }
 
-  createTask(name: string, taskPath: string, description?: string, provider: 'claude' | 'codex' = 'claude'): Task {
+  createTask(name: string, taskPath?: string, description?: string, provider: 'claude' | 'codex' = 'claude'): Task {
     const now = new Date().toISOString();
-    const absPath = existsSync(taskPath) ? taskPath : join(process.cwd(), taskPath);
+    const absPath = taskPath ? (existsSync(taskPath) ? taskPath : join(process.cwd(), taskPath)) : join(process.cwd(), name);
 
     const task: Task = {
       name,

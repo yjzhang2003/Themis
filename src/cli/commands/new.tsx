@@ -24,7 +24,9 @@ export function NewCommand({ store, args }: NewCommandProps) {
     }
 
     try {
-      const newTask = store.createTask(nameArg, args.description as string | undefined);
+      const provider = (args.provider as 'claude' | 'codex') || 'claude';
+      // Second arg (taskPath) is passed via --description flag in original code
+      const newTask = store.createTask(nameArg, args.description as string | undefined, undefined, provider);
       setTask({ id: newTask.id, name: newTask.name });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error');
