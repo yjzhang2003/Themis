@@ -27,6 +27,7 @@ type View =
   | 'task-detail'
   | 'task-create'
   | 'task-create-current-dir'
+  | 'task-create-provider'
   | 'task-delete-confirm'
   | 'skills'
   | 'skill-categories'
@@ -117,6 +118,7 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
   const [supervisorReviewTaskId, setSupervisorReviewTaskId] = useState<string | null>(null);
   const [browseSkillPage, setBrowseSkillPage] = useState(1);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState<'claude' | 'codex'>('claude');
   const [selectedHookIds, setSelectedHookIds] = useState<string[]>([]);
 
   // CLI context
@@ -720,10 +722,7 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
                   // Task with this name already exists, error
                   return;
                 }
-                store.createTask(selectedTaskName, workspaceRoot);
-                refresh();
-                setSelectedTaskName(null);
-                setView('tasks');
+                setView('task-create-provider');
               },
             },
             {
@@ -740,6 +739,58 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
 
         <Box marginTop={1}>
           <Text dimColor>[Esc] Cancel and go back</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Task Create - Step 3: Select provider
+  if (view === 'task-create-provider' && selectedTaskName) {
+    return (
+      <Box key="task-create-provider" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>CREATE TASK</Text>
+        </Box>
+        <Box paddingX={1} flexDirection="column">
+          <Text>Task name: <Text color="cyan">{selectedTaskName}</Text></Text>
+          <Text dimColor>Current directory: {workspaceRoot}</Text>
+        </Box>
+        <Box marginTop={1} flexDirection="column">
+          <Text>Select AI Provider:</Text>
+        </Box>
+
+        <ListBox
+          key={`task-create-provider-${refreshKey}`}
+          items={[
+            {
+              id: 'claude',
+              label: 'Claude Code',
+              description: 'Anthropic Claude Code (default)',
+              onSelect: () => {
+                setSelectedProvider('claude');
+                store.createTask(selectedTaskName, workspaceRoot, undefined, 'claude');
+                refresh();
+                setSelectedTaskName(null);
+                setView('tasks');
+              },
+            },
+            {
+              id: 'codex',
+              label: 'OpenAI Codex',
+              description: 'OpenAI Codex CLI',
+              onSelect: () => {
+                setSelectedProvider('codex');
+                store.createTask(selectedTaskName, workspaceRoot, undefined, 'codex');
+                refresh();
+                setSelectedTaskName(null);
+                setView('tasks');
+              },
+            },
+          ]}
+        />
+
+        <Box marginTop={1}>
+          <Text dimColor>[Esc] Go back</Text>
         </Box>
       </Box>
     );
