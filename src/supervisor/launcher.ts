@@ -1,5 +1,6 @@
 import { homedir } from 'os';
 import { join } from 'path';
+import { mkdirSync, existsSync, readFileSync, writeFileSync, symlinkSync, unlinkSync, cpSync, rmSync } from 'fs';
 import { TmuxManager } from './tmux.js';
 import { LaunchConfig } from './types.js';
 
@@ -16,47 +17,12 @@ export class TaskLauncher {
   buildIsolationEnv(config: LaunchConfig): Record<string, string> {
     const env: Record<string, string> = {};
 
-    // Build paths for attached resources
-    const skillPaths: string[] = [];
-    const hookPaths: string[] = [];
-    const rulePaths: string[] = [];
-
-    for (const skillId of config.skills) {
-      // Check global library
-      const globalPath = join(config.globalLibraryPath, 'skills', skillId);
-      skillPaths.push(globalPath);
-    }
-
-    for (const hookId of config.hooks) {
-      const globalPath = join(config.globalLibraryPath, 'hooks', hookId);
-      hookPaths.push(globalPath);
-    }
-
-    for (const ruleId of config.rules) {
-      const globalPath = join(config.globalLibraryPath, 'rules', ruleId);
-      rulePaths.push(globalPath);
-    }
-
-    // Set isolation environment variables
-    // Claude Code would read these to know what to load
-    if (skillPaths.length > 0) {
-      env['CLAUDE_SKILLS_PATH'] = skillPaths.join(':');
-    }
-    if (hookPaths.length > 0) {
-      env['CLAUDE_HOOKS_PATH'] = hookPaths.join(':');
-    }
-    if (rulePaths.length > 0) {
-      env['CLAUDE_RULES_PATH'] = rulePaths.join(':');
-    }
-
-    // Workspace restriction - Claude Code should only operate within task directory
-    if (skillPaths.length > 0 || hookPaths.length > 0 || rulePaths.length > 0) {
-      env['CLAUDE_WORKSPACE_RESTRICT'] = '1';
-      env['CLAUDE_WORKSPACE_ROOT'] = config.taskDir;
-    }
-
     // Task ID for identification
     env['CLAUDE_TASK_ID'] = config.taskId;
+
+    // Workspace restriction
+    env['CLAUDE_WORKSPACE_RESTRICT'] = '1';
+    env['CLAUDE_WORKSPACE_ROOT'] = config.taskDir;
 
     // Merge custom env vars
     if (config.env) {
@@ -67,26 +33,68 @@ export class TaskLauncher {
   }
 
   /**
-   * Launch Claude Code in a tmux session
+   * Launch Claude Code in a tmux session with isolated HOME
    */
   launch(config: LaunchConfig): string {
     const sessionName = `th-task-${config.taskId}`;
-    const env = this.buildIsolationEnv(config);
+    const taskHomeDir = join('/tmp', `.themis-${config.taskId}-home`);
 
     // Kill existing session if any
     if (this.tmux.sessionExists(sessionName)) {
       this.tmux.killSession(sessionName);
     }
 
-    // Create tmux session
+    // Clean up any existing temp home for this task
+    if (existsSync(taskHomeDir)) {
+      rmSync(taskHomeDir, { recursive: true, force: true });
+    }
+
+    // Create isolated HOME directory
+    mkdirSync(taskHomeDir, { recursive: true });
+
+    // Copy or link task's .claude config to isolated HOME
+    const taskClaudeDir = join(config.taskDir, '.claude');
+    const isolatedClaudeDir = join(taskHomeDir, '.claude');
+
+    if (existsSync(taskClaudeDir)) {
+      // Copy task's .claude to isolated HOME
+      cpSync(taskClaudeDir, isolatedClaudeDir, { recursive: true });
+    } else {
+      // Create minimal .claude with empty skills/hooks
+      mkdirSync(isolatedClaudeDir, { recursive: true });
+      writeFileSync(join(isolatedClaudeDir, 'settings.json'), JSON.stringify({ skills: [], hooks: {} }, null, 2));
+    }
+
+    // Merge system's API credentials into isolated settings.json
+    const globalSettingsPath = join(homedir(), '.claude', 'settings.json');
+    const isolatedSettingsPath = join(isolatedClaudeDir, 'settings.json');
+    if (existsSync(globalSettingsPath)) {
+      try {
+        const globalSettings = JSON.parse(readFileSync(globalSettingsPath, 'utf-8'));
+        let isolatedSettings = JSON.parse(readFileSync(isolatedSettingsPath, 'utf-8'));
+
+        // Merge env credentials from global settings
+        if (globalSettings.env) {
+          isolatedSettings.env = { ...globalSettings.env, ...isolatedSettings.env };
+        }
+
+        writeFileSync(isolatedSettingsPath, JSON.stringify(isolatedSettings, null, 2));
+      } catch {
+        // Ignore errors reading/parsing settings
+      }
+    }
+
+    // Build environment with isolated HOME
+    const env: Record<string, string> = {
+      ...this.buildIsolationEnv(config),
+      HOME: taskHomeDir,
+    };
+
+    // Create tmux session with isolated HOME
     this.tmux.createTaskSession(config.taskId, config.taskDir, env);
 
-    // Give Claude Code launch command
-    // The actual command depends on how Claude Code is installed
-    const claudeCmd = 'claude';
-
-    // Send the command to start Claude Code
-    this.tmux.sendKeys(sessionName, claudeCmd);
+    // Send command to start Claude Code with isolated HOME
+    this.tmux.sendKeys(sessionName, `HOME='${taskHomeDir}' claude`);
 
     return sessionName;
   }

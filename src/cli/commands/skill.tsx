@@ -19,7 +19,7 @@ export function SkillAddCommand({ args }: SkillCommandProps) {
 
     const name = args._[2] as string | undefined;
     if (!name) {
-      setResult({ success: false, error: 'Usage: tharness global skill add <source-path>' });
+      setResult({ success: false, error: 'Usage: themis global skill add <source-path>' });
       return;
     }
 
@@ -103,7 +103,7 @@ export function SkillListCommand({ args }: SkillCommandProps) {
             </Box>
           ))}
           <Box marginTop={1}>
-            <Text dimColor>Use: tharness global skill list --category &lt;name&gt; [--search &lt;query&gt;] [--page &lt;n&gt;]</Text>
+            <Text dimColor>Use: themis global skill list --category &lt;name&gt; [--search &lt;query&gt;] [--page &lt;n&gt;]</Text>
           </Box>
         </Box>
       )}
@@ -151,12 +151,12 @@ export function SkillLinkCommand({ store, args }: SkillCommandProps) {
     const taskName = args._[3] as string | undefined;
 
     if (!skillId) {
-      setResult({ success: false, error: 'Usage: tharness skill link <skill-id> [task-name]' });
+      setResult({ success: false, error: 'Usage: themis skill link <skill-id> [task-name]' });
       return;
     }
 
     if (!taskName) {
-      setResult({ success: false, error: 'Usage: tharness skill link <skill-id> [task-name]' });
+      setResult({ success: false, error: 'Usage: themis skill link <skill-id> [task-name]' });
       return;
     }
 
@@ -215,12 +215,12 @@ export function SkillUnlinkCommand({ store, args }: SkillCommandProps) {
     const taskName = args._[3] as string | undefined;
 
     if (!skillId) {
-      setResult({ success: false, error: 'Usage: tharness skill unlink <skill-id> [task-name]' });
+      setResult({ success: false, error: 'Usage: themis skill unlink <skill-id> [task-name]' });
       return;
     }
 
     if (!taskName) {
-      setResult({ success: false, error: 'Usage: tharness skill unlink <skill-id> [task-name]' });
+      setResult({ success: false, error: 'Usage: themis skill unlink <skill-id> [task-name]' });
       return;
     }
 

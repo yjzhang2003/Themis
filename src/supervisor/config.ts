@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import YAML from 'yaml';
 import { SupervisorConfig, SupervisorConfigSchema } from './types.js';
 
-const CONFIG_PATH = join(homedir(), '.claude', 'harness', 'supervisor.yaml');
+const CONFIG_PATH = join(homedir(), '.claude', 'themis', 'supervisor.yaml');
 
 export class SupervisorConfigManager {
   private config: SupervisorConfig;
@@ -35,7 +35,7 @@ export class SupervisorConfigManager {
       auto_restart: false,
       max_restart_attempts: 3,
       restart_cooldown_ms: 30000,
-      log_path: join(homedir(), '.claude', 'harness', 'supervisor.log'),
+      log_path: join(homedir(), '.claude', 'themis', 'supervisor.log'),
       notifications: {
         on_death: true,
         on_restart: false,
@@ -46,7 +46,7 @@ export class SupervisorConfigManager {
   }
 
   private saveConfig(config: SupervisorConfig): void {
-    const dir = join(homedir(), '.claude', 'harness');
+    const dir = join(homedir(), '.claude', 'themis');
     mkdirSync(dir, { recursive: true });
     const yaml = YAML.stringify(config);
     writeFileSync(CONFIG_PATH, yaml, 'utf-8');
@@ -62,11 +62,11 @@ export class SupervisorConfigManager {
   }
 
   getSessionsDir(): string {
-    return join(homedir(), '.claude', 'harness', 'sessions');
+    return join(homedir(), '.claude', 'themis', 'sessions');
   }
 
   ensureDirectories(): void {
-    const dir = join(homedir(), '.claude', 'harness', 'sessions');
+    const dir = join(homedir(), '.claude', 'themis', 'sessions');
     mkdirSync(dir, { recursive: true });
   }
 

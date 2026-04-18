@@ -1,15 +1,15 @@
 {
-  "name": "@ths/harness",
+  "name": "@themis/themis",
   "version": "0.1.0",
-  "description": "Claude Code Task Management System with INK CLI",
+  "description": "Autonomous Task Management System for Claude Code",
   "type": "module",
   "bin": {
-    "tharness": "./bin/tharness.js"
+    "themis": "./bin/themis.js"
   },
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/cli/index.tsx",
-    "start": "node --loader tsx src/cli/index.tsx",
+    "start": "node --import tsx src/cli/index.tsx",
     "typecheck": "tsc --noEmit",
     "test": "vitest"
   },
@@ -17,13 +17,13 @@
     "chalk": "^5.4.1",
     "ink": "^5.2.0",
     "react": "^18.3.1",
+    "tsx": "^4.19.0",
     "yaml": "^2.7.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.1",
-    "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^4.1.4"
   }

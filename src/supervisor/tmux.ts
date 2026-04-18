@@ -3,7 +3,8 @@ import { TmuxSession } from './types.js';
 
 // Validate identifiers to prevent shell injection
 const SAFE_SESSION_NAME_REGEX = /^[a-zA-Z0-9_-]+$/;
-const SAFE_PATH_REGEX = /^[\w\-\/.]+$/;
+// Allow paths with spaces - just reject shell metacharacters
+const UNSAFE_PATH_REGEX = /[;|`$(){}[\]<>\\]/;
 
 function validateSessionName(name: string): string {
   if (!SAFE_SESSION_NAME_REGEX.test(name)) {
@@ -13,7 +14,7 @@ function validateSessionName(name: string): string {
 }
 
 function validatePath(path: string): string {
-  if (!SAFE_PATH_REGEX.test(path)) {
+  if (UNSAFE_PATH_REGEX.test(path)) {
     throw new Error(`Invalid path: ${path}`);
   }
   return path;
@@ -77,9 +78,8 @@ export class TmuxManager {
             `tmux set-environment -t "${sessionName}" ${envEntries}`,
             { stdio: 'ignore' }
           );
-        } catch (envError) {
-          // Env setup failed but session exists - log warning
-          console.error(`[TmuxManager] Failed to set environment variables: ${envError}`);
+        } catch {
+          // Env setup failed silently - session still works
         }
       }
     } catch (e) {

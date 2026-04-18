@@ -4,12 +4,12 @@ import { Box, Text } from 'ink';
 export function HelpCommand() {
   return (
     <Box flexDirection="column" padding={1}>
-      <Text bold>Task Harness CLI</Text>
-      <Text dimColor>Claude Code Task Management System</Text>
+      <Text bold>Themis CLI</Text>
+      <Text dimColor>Autonomous Task Management System for Claude Code</Text>
 
       <Box marginTop={1} flexDirection="column">
         <Text bold>Usage:</Text>
-        <Text>  tharness &lt;command&gt; [options]</Text>
+        <Text>  themis &lt;command&gt; [options]</Text>
       </Box>
 
       <Box marginTop={1} flexDirection="column">
@@ -51,7 +51,7 @@ export function HelpCommand() {
       </Box>
 
       <Box marginTop={1}>
-        <Text dimColor>Run 'tharness &lt;command&gt; --help' for command-specific help</Text>
+        <Text dimColor>Run 'themis &lt;command&gt; --help' for command-specific help</Text>
       </Box>
     </Box>
   );

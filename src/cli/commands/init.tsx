@@ -29,11 +29,11 @@ export function InitCommand({ store }: InitCommandProps) {
         <>
           <Box>
             <Text color="green">✓</Text>
-            <Text> Tharness initialized</Text>
+            <Text> Themis initialized</Text>
           </Box>
           <Box flexDirection="column" marginTop={1}>
-            <Text dimColor>Main directory: ~/.tharness/</Text>
-            <Text dimColor>Run <Text color="cyan">tharness</Text> to start</Text>
+            <Text dimColor>Main directory: ~/.themis/</Text>
+            <Text dimColor>Run <Text color="cyan">themis</Text> to start</Text>
           </Box>
         </>
       )}

@@ -18,6 +18,7 @@ export interface ListBoxProps {
   multiSelect?: boolean;
   selectedIds?: string[];
   onToggleSelect?: (id: string) => void;
+  onConfirm?: () => void;
 }
 
 export function ListBox({
@@ -29,6 +30,7 @@ export function ListBox({
   multiSelect = false,
   selectedIds = [],
   onToggleSelect,
+  onConfirm,
 }: ListBoxProps) {
   const [selectedIndex, setSelectedIndex] = useState(initialIndex);
   const [keyHandler, setKeyHandler] = useState<((key: string) => void) | null>(null);
@@ -95,7 +97,9 @@ export function ListBox({
 
       // Enter - select (don't trim!)
       if (data === '\r' || data === '\n') {
-        if (items[selectedIndex]) {
+        if (multiSelect && selectedIds.length > 0 && onConfirm) {
+          onConfirm();
+        } else if (items[selectedIndex]) {
           items[selectedIndex].onSelect();
         }
         return;

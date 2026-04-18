@@ -41,7 +41,7 @@ export function ListCommand({ store }: ListCommandProps) {
       <Text bold>Tasks</Text>
       <Box marginTop={1}>
         {tasks.length === 0 ? (
-          <Text dimColor>No tasks yet. Run 'tharness new [name]' to create one.</Text>
+          <Text dimColor>No tasks yet. Run 'themis new [name]' to create one.</Text>
         ) : (
           <Box flexDirection="column">
             {tasks.map((task) => (

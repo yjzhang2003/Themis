@@ -68,12 +68,12 @@ function CLI() {
           <Box flexDirection="column" padding={1}>
             <Text bold>Skill Commands</Text>
             <Text>
-              <Text color="cyan">tharness skill link &lt;skill-id&gt; &lt;task-name&gt;</Text> - Link skill to task
+              <Text color="cyan">themis skill link &lt;skill-id&gt; &lt;task-name&gt;</Text> - Link skill to task
             </Text>
             <Text>
-              <Text color="cyan">tharness skill unlink &lt;skill-id&gt; &lt;task-name&gt;</Text> - Unlink skill from task
+              <Text color="cyan">themis skill unlink &lt;skill-id&gt; &lt;task-name&gt;</Text> - Unlink skill from task
             </Text>
-            <Text dimColor>Use tharness global skill list to browse available skills</Text>
+            <Text dimColor>Use themis global skill list to browse available skills</Text>
           </Box>
         );
     }
@@ -96,12 +96,12 @@ function CLI() {
           <Box flexDirection="column" padding={1}>
             <Text bold>Hook Commands</Text>
             <Text>
-              <Text color="cyan">tharness hook link &lt;hook-id&gt; &lt;task-name&gt;</Text> - Link hook to task
+              <Text color="cyan">themis hook link &lt;hook-id&gt; &lt;task-name&gt;</Text> - Link hook to task
             </Text>
             <Text>
-              <Text color="cyan">tharness hook unlink &lt;hook-id&gt; &lt;task-name&gt;</Text> - Unlink hook from task
+              <Text color="cyan">themis hook unlink &lt;hook-id&gt; &lt;task-name&gt;</Text> - Unlink hook from task
             </Text>
-            <Text dimColor>Use tharness global hook list to browse available hooks</Text>
+            <Text dimColor>Use themis global hook list to browse available hooks</Text>
           </Box>
         );
     }
@@ -138,9 +138,9 @@ function CLI() {
     default:
       return (
         <Box flexDirection="column" padding={1}>
-          <Text bold>Task Harness CLI</Text>
-          <Text dimColor>Run <Text color="cyan">tharness</Text> for interactive mode</Text>
-          <Text dimColor>Run <Text color="cyan">tharness --help</Text> for command usage</Text>
+          <Text bold>Themis CLI</Text>
+          <Text dimColor>Run <Text color="cyan">themis</Text> for interactive mode</Text>
+          <Text dimColor>Run <Text color="cyan">themis --help</Text> for command usage</Text>
         </Box>
       );
   }

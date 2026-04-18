@@ -1,6 +1,0 @@
-id: lint
-name: lint
-type: PostToolUse
-matcher: Write|Edit
-command: eslint --fix
-description: ""

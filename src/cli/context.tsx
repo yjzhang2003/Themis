@@ -37,10 +37,10 @@ export function CLIProvider({ children }: CLIProviderProps) {
   // Find workspace root synchronously - only check current directory
   const workspaceRoot = useMemo(() => {
     const root = process.env.ORIGINAL_PWD || process.cwd();
-    if (existsSync(`${root}/harness.yaml`)) {
+    if (existsSync(`${root}/themis.yaml`)) {
       return root;
     }
-    return root; // Use current directory even without harness.yaml
+    return root; // Use current directory even without themis.yaml
   }, []);
 
   // Initialize stores synchronously

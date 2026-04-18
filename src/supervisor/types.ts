@@ -9,7 +9,7 @@ export const SupervisorConfigSchema = z.object({
   auto_restart: z.boolean().default(false),
   max_restart_attempts: z.number().default(3),
   restart_cooldown_ms: z.number().default(30000),
-  log_path: z.string().default('~/.claude/harness/supervisor.log'),
+  log_path: z.string().default('~/.claude/themis/supervisor.log'),
   notifications: z.object({
     on_death: z.boolean().default(true),
     on_restart: z.boolean().default(false),

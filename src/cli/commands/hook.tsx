@@ -23,12 +23,12 @@ export function HookAddCommand({ args }: HookCommandProps) {
     const matcher = (args.matcher || args.m) as string | undefined;
 
     if (!name) {
-      setResult({ success: false, error: 'Usage: tharness global hook add <name> <type> --command <cmd> [--matcher <pattern>]' });
+      setResult({ success: false, error: 'Usage: themis global hook add <name> <type> --command <cmd> [--matcher <pattern>]' });
       return;
     }
 
     if (!command) {
-      setResult({ success: false, error: 'Usage: tharness global hook add <name> <type> --command <cmd>' });
+      setResult({ success: false, error: 'Usage: themis global hook add <name> <type> --command <cmd>' });
       return;
     }
 
@@ -96,7 +96,7 @@ export function HookListCommand() {
       <Text bold>Global Hooks</Text>
       {hooks.length === 0 ? (
         <Box marginTop={1}>
-          <Text dimColor>No hooks yet. Run 'tharness global hook add [name] [type] --command [cmd]' to create one.</Text>
+          <Text dimColor>No hooks yet. Run 'themis global hook add [name] [type] --command [cmd]' to create one.</Text>
         </Box>
       ) : (
         <Box flexDirection="column" marginTop={1}>
@@ -134,12 +134,12 @@ export function HookLinkCommand({ store, args }: HookCommandProps) {
     const taskName = args._[3] as string | undefined;
 
     if (!hookId) {
-      setResult({ success: false, error: 'Usage: tharness hook link <hook-id> [task-name]' });
+      setResult({ success: false, error: 'Usage: themis hook link <hook-id> [task-name]' });
       return;
     }
 
     if (!taskName) {
-      setResult({ success: false, error: 'Usage: tharness hook link <hook-id> [task-name]' });
+      setResult({ success: false, error: 'Usage: themis hook link <hook-id> [task-name]' });
       return;
     }
 
@@ -208,12 +208,12 @@ export function HookUnlinkCommand({ store, args }: HookCommandProps) {
     const taskName = args._[3] as string | undefined;
 
     if (!hookId) {
-      setResult({ success: false, error: 'Usage: tharness hook unlink <hook-id> [task-name]' });
+      setResult({ success: false, error: 'Usage: themis hook unlink <hook-id> [task-name]' });
       return;
     }
 
     if (!taskName) {
-      setResult({ success: false, error: 'Usage: tharness hook unlink <hook-id> [task-name]' });
+      setResult({ success: false, error: 'Usage: themis hook unlink <hook-id> [task-name]' });
       return;
     }
 

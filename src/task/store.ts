@@ -4,9 +4,9 @@ import { homedir } from 'os';
 import { Task, TasksIndexSchema } from './types.js';
 import { GlobalLibraryStore } from '../global-library/index.js';
 
-const MAIN_DIR = '.tharness';
+const MAIN_DIR = '.themis';
 const TASKS_FILE = 'tasks.json';
-const TASK_MARKER = '.tharness';
+const TASK_MARKER = '.themis';
 
 function getMainPath(): string {
   return join(homedir(), MAIN_DIR);
@@ -94,7 +94,7 @@ export class TaskStore {
       hooks: {},
     };
 
-    // Create .tharness/ marker directory (CLI识别用)
+    // Create .themis/ marker directory (CLI识别用)
     mkdirSync(getTaskMarkerPath(absPath), { recursive: true });
 
     // Create .claude/ directory for Claude Code配置
@@ -175,7 +175,7 @@ export class TaskStore {
 
     const task = this.index.tasks[idx];
 
-    // Remove .tharness/ marker directory but NOT the user's source files
+    // Remove .themis/ marker directory but NOT the user's source files
     const markerPath = getTaskMarkerPath(task.path);
     if (existsSync(markerPath)) {
       rmSync(markerPath, { recursive: true, force: true });

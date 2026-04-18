@@ -22,7 +22,7 @@ export function OpenSpecCommand({ store, args }: OpenSpecCommandProps) {
     const subcommand = args._[1] as string | undefined;
 
     if (subcommand === 'scan') {
-      // tharness openspec scan [--path <path>]
+      // themis openspec scan [--path <path>]
       const pathArg = args.path as string | undefined;
       const scanPath = pathArg || join(process.cwd(), '..');
 
@@ -43,13 +43,13 @@ export function OpenSpecCommand({ store, args }: OpenSpecCommandProps) {
     }
 
     if (subcommand === 'bind') {
-      // tharness openspec bind <task-id> <change-id> [--capability <capability>]
+      // themis openspec bind <task-id> <change-id> [--capability <capability>]
       const taskId = args._[2] as string | undefined;
       const changeId = args._[3] as string | undefined;
       const capability = args.capability as string | undefined;
 
       if (!taskId || !changeId) {
-        setError('Usage: tharness openspec bind <task-id> <change-id> [--capability <capability>]');
+        setError('Usage: themis openspec bind <task-id> <change-id> [--capability <capability>]');
         return;
       }
 
@@ -72,7 +72,7 @@ export function OpenSpecCommand({ store, args }: OpenSpecCommandProps) {
     }
 
     if (subcommand === 'list') {
-      // tharness openspec list [--path <path>]
+      // themis openspec list [--path <path>]
       const pathArg = args.path as string | undefined;
       const scanPath = pathArg || join(process.cwd(), '..');
 
@@ -99,9 +99,9 @@ export function OpenSpecCommand({ store, args }: OpenSpecCommandProps) {
 
     // Default: show help
     setOutput(`OpenSpec Commands:
-  tharness openspec scan [--path <path>]   Scan for OpenSpec project
-  tharness openspec list [--path <path>]   List changes and capabilities
-  tharness openspec bind <task-id> <change-id> [--capability <cap>]  Bind task to change
+  themis openspec scan [--path <path>]   Scan for OpenSpec project
+  themis openspec list [--path <path>]   List changes and capabilities
+  themis openspec bind <task-id> <change-id> [--capability <cap>]  Bind task to change
 `);
   }, [store, args]);
 
