@@ -735,6 +735,7 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
               },
             },
           ]}
+          onBack={() => setView('task-create')}
         />
 
         <Box marginTop={1}>
