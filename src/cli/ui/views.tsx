@@ -787,6 +787,7 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
               },
             },
           ]}
+          onBack={() => setView('task-create-current-dir')}
         />
 
         <Box marginTop={1}>
