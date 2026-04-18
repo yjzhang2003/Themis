@@ -4,6 +4,8 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { TmuxManager } from './tmux.js';
 import { SessionState, SupervisorConfig } from './types.js';
 
+const TASK_SESSION_PREFIXES = ['th-claude-', 'th-codex-', 'th-task-'];
+
 export class SessionMonitor {
   private tmux: TmuxManager;
   private sessionsDir: string;
@@ -20,13 +22,16 @@ export class SessionMonitor {
    * Check all task sessions
    */
   checkAllSessions(): SessionState[] {
-    const sessions = this.tmux.listSessions(this.taskSessionPrefix);
     const states: SessionState[] = [];
 
-    for (const session of sessions) {
-      const state = this.checkSession(session.name);
-      states.push(state);
-      this.saveSessionState(state);
+    // Check sessions for all providers
+    for (const prefix of TASK_SESSION_PREFIXES) {
+      const sessions = this.tmux.listSessions(prefix);
+      for (const session of sessions) {
+        const state = this.checkSession(session.name);
+        states.push(state);
+        this.saveSessionState(state);
+      }
     }
 
     // Clean up states for sessions that no longer exist
@@ -36,35 +41,37 @@ export class SessionMonitor {
   }
 
   /**
-   * Check a single session by task ID
+   * Check a single session by task ID (checks all provider prefixes)
    */
   checkSessionByTaskId(taskId: string): SessionState | null {
-    const sessionName = `${this.taskSessionPrefix}${taskId}`;
-    const session = this.tmux.getSession(sessionName);
-    if (!session) {
-      // Check if we have a saved state
-      const stateFile = this.getStateFile(taskId);
-      if (existsSync(stateFile)) {
-        try {
-          const saved = JSON.parse(readFileSync(stateFile, 'utf-8')) as SessionState;
-          // Update status to dead
-          const updated: SessionState = {
-            ...saved,
-            status: 'dead',
-            last_check: new Date().toISOString(),
-          };
-          this.saveSessionState(updated);
-          return updated;
-        } catch {
-          // Ignore
-        }
+    for (const prefix of TASK_SESSION_PREFIXES) {
+      const sessionName = `${prefix}${taskId}`;
+      const session = this.tmux.getSession(sessionName);
+      if (session) {
+        const state = this.buildSessionState(session);
+        this.saveSessionState(state);
+        return state;
       }
-      return null;
     }
 
-    const state = this.buildSessionState(session);
-    this.saveSessionState(state);
-    return state;
+    // Check if we have a saved state
+    const stateFile = this.getStateFile(taskId);
+    if (existsSync(stateFile)) {
+      try {
+        const saved = JSON.parse(readFileSync(stateFile, 'utf-8')) as SessionState;
+        // Update status to dead
+        const updated: SessionState = {
+          ...saved,
+          status: 'dead',
+          last_check: new Date().toISOString(),
+        };
+        this.saveSessionState(updated);
+        return updated;
+      } catch {
+        // Ignore
+      }
+    }
+    return null;
   }
 
   /**
@@ -141,7 +148,21 @@ export class SessionMonitor {
    * Extract task ID from session name
    */
   private extractTaskId(sessionName: string): string {
-    return sessionName.replace(this.taskSessionPrefix, '');
+    for (const prefix of TASK_SESSION_PREFIXES) {
+      if (sessionName.startsWith(prefix)) {
+        const taskId = sessionName.replace(prefix, '');
+        // Validate extracted task ID to prevent path traversal
+        if (!/^[a-zA-Z0-9_-]+$/.test(taskId)) {
+          throw new Error(`Invalid task ID extracted from session name: ${taskId}`);
+        }
+        return taskId;
+      }
+    }
+    const taskId = sessionName.replace(this.taskSessionPrefix, '');
+    if (!/^[a-zA-Z0-9_-]+$/.test(taskId)) {
+      throw new Error(`Invalid task ID extracted from session name: ${taskId}`);
+    }
+    return taskId;
   }
 
   /**

@@ -10,6 +10,8 @@ import { TmuxManager } from '../../supervisor/tmux.js';
 import { SessionMonitor } from '../../supervisor/monitor.js';
 import { SupervisorConfigManager } from '../../supervisor/config.js';
 import { SupervisorLoop } from '../../supervisor/supervisor-loop.js';
+import { getProvider } from '../../supervisor/providers/base.js';
+import type { ProviderType } from '../../supervisor/providers/base.js';
 import { ListBox } from './listbox.js';
 import { useCLI } from '../context.js';
 
@@ -52,11 +54,12 @@ function shellEscape(s: string): string {
   return s.replace(/'/g, "'\\''");
 }
 
-// Helper: Launch Claude Code in tmux for a task and attach
-function launchTaskSession(taskName: string, taskPath: string, skills: string[] = [], hooks: string[] = []): void {
+// Helper: Launch AI CLI in tmux for a task and attach
+function launchTaskSession(taskName: string, taskPath: string, skills: string[] = [], hooks: string[] = [], provider: ProviderType = 'claude'): void {
   const launcher = new TaskLauncher();
   const globalLib = new GlobalLibraryStore();
-  const sessionName = `th-task-${taskName.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+  const providerInstance = getProvider(provider);
+  const sessionName = providerInstance.sessionName(taskName);
 
   // Initialize status file
   const statusMonitor = new TaskStatusMonitor();
@@ -66,6 +69,7 @@ function launchTaskSession(taskName: string, taskPath: string, skills: string[] 
   const launchConfig = {
     taskId: taskName,
     taskDir: taskPath,
+    provider,
     skills,
     hooks,
     rules: [],
@@ -88,11 +92,11 @@ function launchTaskSession(taskName: string, taskPath: string, skills: string[] 
 }
 
 // Helper: Stop a task session
-function stopTaskSession(taskName: string): Promise<void> {
+function stopTaskSession(taskName: string, provider: ProviderType = 'claude'): Promise<void> {
   return new Promise((resolve) => {
     const launcher = new TaskLauncher();
     try {
-      launcher.stop(taskName);
+      launcher.stop(taskName, provider);
     } catch {
       // Ignore errors
     }
@@ -774,11 +778,11 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
             {
               id: 'activate',
               label: task.status === 'in_progress' ? 'Deactivate' : 'Activate',
-              description: task.status === 'in_progress' ? 'Stop working' : 'Start working',
+              description: task.status === 'in_progress' ? 'Stop working' : `Start ${task.provider === 'codex' ? 'Codex' : 'Claude Code'}`,
               onSelect: () => {
                 if (task.status === 'in_progress') {
                   // Deactivate: stop tmux session and update status
-                  stopTaskSession(task.name).then(() => {
+                  stopTaskSession(task.name, task.provider).then(() => {
                     store.updateTask(selectedTaskName, { status: 'paused' });
                     refresh();
                   });
@@ -789,7 +793,7 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
                   const skillIds = task.skills.map(s => s.skill);
                   const hookIds = Object.values(task.hooks).flat();
                   // Note: launchTaskSession takes over terminal, status update happens on detach
-                  launchTaskSession(task.name, task.path, skillIds, hookIds);
+                  launchTaskSession(task.name, task.path, skillIds, hookIds, task.provider);
                   // This line is reached after user detaches (Ctrl+B, D)
                   store.updateTask(selectedTaskName, { status: 'in_progress' });
                   refresh();
@@ -799,9 +803,10 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
             ...(task.status === 'in_progress' ? [{
               id: 'attach',
               label: 'Attach',
-              description: 'Connect to Claude Code session',
+              description: `Connect to ${task.provider === 'codex' ? 'Codex' : 'Claude Code'} session`,
               onSelect: () => {
-                const sessionName = `th-task-${task.name.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+                const provider = getProvider(task.provider);
+                const sessionName = provider.sessionName(task.name);
                 execSync(`tmux attach-session -t "${sessionName}"`, { stdio: 'inherit' });
                 refresh();
               },

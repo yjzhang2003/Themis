@@ -8,7 +8,7 @@ interface ActivateCommandProps {
 }
 
 export function ActivateCommand({ store, args }: ActivateCommandProps) {
-  const [result, setResult] = useState<{ success: boolean; error?: string }>({
+  const [result, setResult] = useState<{ success: boolean; error?: string; provider?: string }>({
     success: false,
   });
 
@@ -31,13 +31,13 @@ export function ActivateCommand({ store, args }: ActivateCommandProps) {
         return;
       }
 
-      // Sync resources to task's .claude/settings.json
+      // Sync resources to task's .claude/settings.json or .codex/config.json
       store.syncTaskResources(taskName);
 
       // Update task status
       store.updateTask(taskName, { status: 'in_progress' });
 
-      setResult({ success: true });
+      setResult({ success: true, provider: task.provider });
     } catch (e) {
       setResult({ success: false, error: e instanceof Error ? e.message : 'Unknown error' });
     }
@@ -53,6 +53,8 @@ export function ActivateCommand({ store, args }: ActivateCommandProps) {
     );
   }
 
+  const sessionPrefix = result.provider === 'codex' ? 'th-codex' : 'th-claude';
+
   return (
     <Box flexDirection="column" padding={1}>
       <Box>
@@ -63,7 +65,7 @@ export function ActivateCommand({ store, args }: ActivateCommandProps) {
         <Text dimColor>Use tmux to attach to the task session:</Text>
       </Box>
       <Box flexDirection="column" paddingLeft={2}>
-        <Text dimColor>tmux attach-session -t th-task-{args._[1]}</Text>
+        <Text dimColor>tmux attach-session -t {sessionPrefix}-{args._[1]}</Text>
       </Box>
     </Box>
   );

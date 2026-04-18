@@ -39,10 +39,13 @@ export interface TmuxSession {
   attached: boolean;
 }
 
+import type { ProviderType } from './providers/base.js';
+
 // Task launch configuration
 export interface LaunchConfig {
   taskId: string;
   taskDir: string;
+  provider?: ProviderType;
   skills: string[];
   hooks: string[];
   rules: string[];

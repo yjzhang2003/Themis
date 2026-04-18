@@ -55,7 +55,14 @@ export class TmuxManager {
    * Create a new session for a task
    */
   createTaskSession(taskId: string, workingDir: string, env: Record<string, string>): TmuxSession {
-    const sessionName = `th-task-${validateSessionName(taskId)}`;
+    return this.createSession(`th-task-${validateSessionName(taskId)}`, workingDir, env);
+  }
+
+  /**
+   * Create a new session with a custom name
+   */
+  createSession(sessionName: string, workingDir: string, env: Record<string, string>): TmuxSession {
+    const safeSessionName = validateSessionName(sessionName);
     const safeWorkingDir = validatePath(workingDir);
 
     // Build environment string for tmux - validate env var names
@@ -67,7 +74,7 @@ export class TmuxManager {
     // Create session with environment
     try {
       execSync(
-        `tmux new-session -d -s "${sessionName}" -c "${safeWorkingDir}"`,
+        `tmux new-session -d -s "${safeSessionName}" -c "${safeWorkingDir}"`,
         { stdio: 'ignore' }
       );
 
@@ -75,7 +82,7 @@ export class TmuxManager {
       if (envEntries) {
         try {
           execSync(
-            `tmux set-environment -t "${sessionName}" ${envEntries}`,
+            `tmux set-environment -t "${safeSessionName}" ${envEntries}`,
             { stdio: 'ignore' }
           );
         } catch {
@@ -84,14 +91,14 @@ export class TmuxManager {
       }
     } catch (e) {
       // Session might already exist
-      if (this.sessionExists(sessionName)) {
-        return this.getSession(sessionName)!;
+      if (this.sessionExists(safeSessionName)) {
+        return this.getSession(safeSessionName)!;
       }
       throw e;
     }
 
     return {
-      name: sessionName,
+      name: safeSessionName,
       windows: 1,
       created: new Date().toISOString(),
       attached: false,

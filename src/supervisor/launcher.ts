@@ -1,8 +1,8 @@
-import { homedir } from 'os';
+import { existsSync, rmSync } from 'fs';
 import { join } from 'path';
-import { mkdirSync, existsSync, readFileSync, writeFileSync, symlinkSync, unlinkSync, cpSync, rmSync } from 'fs';
 import { TmuxManager } from './tmux.js';
 import { LaunchConfig } from './types.js';
+import { getProvider, type ProviderType } from './providers/base.js';
 
 export class TaskLauncher {
   private tmux: TmuxManager;
@@ -12,36 +12,20 @@ export class TaskLauncher {
   }
 
   /**
-   * Build isolation environment variables
-   */
-  buildIsolationEnv(config: LaunchConfig): Record<string, string> {
-    const env: Record<string, string> = {};
-
-    // Task ID for identification
-    env['CLAUDE_TASK_ID'] = config.taskId;
-
-    // Workspace restriction
-    env['CLAUDE_WORKSPACE_RESTRICT'] = '1';
-    env['CLAUDE_WORKSPACE_ROOT'] = config.taskDir;
-
-    // Merge custom env vars
-    if (config.env) {
-      Object.assign(env, config.env);
-    }
-
-    return env;
-  }
-
-  /**
-   * Launch Claude Code in a tmux session with isolated HOME
+   * Launch AI CLI in a tmux session with isolated HOME
    */
   launch(config: LaunchConfig): string {
-    const sessionName = `th-task-${config.taskId}`;
+    const providerType = config.provider ?? 'claude';
+    const provider = getProvider(providerType);
+    const sessionName = provider.sessionName(config.taskId);
     const taskHomeDir = join('/tmp', `.themis-${config.taskId}-home`);
 
-    // Kill existing session if any
-    if (this.tmux.sessionExists(sessionName)) {
-      this.tmux.killSession(sessionName);
+    // Kill existing session for this task (any provider)
+    for (const pt of ['claude', 'codex'] as ProviderType[]) {
+      const sn = getProvider(pt).sessionName(config.taskId);
+      if (this.tmux.sessionExists(sn)) {
+        this.tmux.killSession(sn);
+      }
     }
 
     // Clean up any existing temp home for this task
@@ -49,52 +33,25 @@ export class TaskLauncher {
       rmSync(taskHomeDir, { recursive: true, force: true });
     }
 
-    // Create isolated HOME directory
-    mkdirSync(taskHomeDir, { recursive: true });
+    // Prepare isolated HOME directory with provider-specific config
+    const isolated = provider.prepareIsolatedHome(config.taskDir, config);
 
-    // Copy or link task's .claude config to isolated HOME
-    const taskClaudeDir = join(config.taskDir, '.claude');
-    const isolatedClaudeDir = join(taskHomeDir, '.claude');
-
-    if (existsSync(taskClaudeDir)) {
-      // Copy task's .claude to isolated HOME
-      cpSync(taskClaudeDir, isolatedClaudeDir, { recursive: true });
-    } else {
-      // Create minimal .claude with empty skills/hooks
-      mkdirSync(isolatedClaudeDir, { recursive: true });
-      writeFileSync(join(isolatedClaudeDir, 'settings.json'), JSON.stringify({ skills: [], hooks: {} }, null, 2));
-    }
-
-    // Merge system's API credentials into isolated settings.json
-    const globalSettingsPath = join(homedir(), '.claude', 'settings.json');
-    const isolatedSettingsPath = join(isolatedClaudeDir, 'settings.json');
-    if (existsSync(globalSettingsPath)) {
-      try {
-        const globalSettings = JSON.parse(readFileSync(globalSettingsPath, 'utf-8'));
-        let isolatedSettings = JSON.parse(readFileSync(isolatedSettingsPath, 'utf-8'));
-
-        // Merge env credentials from global settings
-        if (globalSettings.env) {
-          isolatedSettings.env = { ...globalSettings.env, ...isolatedSettings.env };
-        }
-
-        writeFileSync(isolatedSettingsPath, JSON.stringify(isolatedSettings, null, 2));
-      } catch {
-        // Ignore errors reading/parsing settings
-      }
-    }
-
-    // Build environment with isolated HOME
+    // Build environment with isolated HOME + provider-specific vars
     const env: Record<string, string> = {
-      ...this.buildIsolationEnv(config),
-      HOME: taskHomeDir,
+      ...provider.buildIsolationEnv(config),
+      HOME: isolated.homeDir,
     };
 
-    // Create tmux session with isolated HOME
-    this.tmux.createTaskSession(config.taskId, config.taskDir, env);
+    // Merge custom env vars
+    if (config.env) {
+      Object.assign(env, config.env);
+    }
 
-    // Send command to start Claude Code with isolated HOME
-    this.tmux.sendKeys(sessionName, `HOME='${taskHomeDir}' claude`);
+    // Create tmux session with isolated HOME
+    this.tmux.createSession(sessionName, config.taskDir, env);
+
+    // Send command to start the AI CLI
+    this.tmux.sendKeys(sessionName, provider.buildLaunchCommand(isolated));
 
     return sessionName;
   }
@@ -120,32 +77,33 @@ export class TaskLauncher {
   /**
    * Stop a running task
    */
-  stop(taskId: string): void {
-    const sessionName = `th-task-${taskId}`;
+  stop(taskId: string, provider: ProviderType = 'claude'): void {
+    const providerInstance = getProvider(provider);
+    const sessionName = providerInstance.sessionName(taskId);
     this.tmux.killSession(sessionName);
   }
 
   /**
    * Send input to a running task
    */
-  sendInput(taskId: string, input: string): void {
-    const sessionName = `th-task-${taskId}`;
+  sendInput(taskId: string, input: string, provider: ProviderType = 'claude'): void {
+    const sessionName = getProvider(provider).sessionName(taskId);
     this.tmux.sendKeys(sessionName, input);
   }
 
   /**
    * Get session output (for logs)
    */
-  getSessionOutput(taskId: string): string {
-    const sessionName = `th-task-${taskId}`;
+  getSessionOutput(taskId: string, provider: ProviderType = 'claude'): string {
+    const sessionName = getProvider(provider).sessionName(taskId);
     return this.tmux.capturePane(sessionName);
   }
 
   /**
    * Check if a task is running
    */
-  isRunning(taskId: string): boolean {
-    const sessionName = `th-task-${taskId}`;
+  isRunning(taskId: string, provider: ProviderType = 'claude'): boolean {
+    const sessionName = getProvider(provider).sessionName(taskId);
     const state = this.tmux.getSession(sessionName);
     return state !== null;
   }

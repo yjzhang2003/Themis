@@ -6,6 +6,8 @@ import { TaskLauncher } from './launcher.js';
 import { TaskStatusMonitor, TaskStatus } from './status-monitor.js';
 import { SessionState, SupervisorConfig, SupervisorConfigSchema } from './types.js';
 import { GlobalLibraryStore } from '../global-library/index.js';
+import { TaskStore } from '../task/store.js';
+import type { ProviderType } from './providers/base.js';
 
 export interface SupervisorLoopConfig {
   checkIntervalMs: number;
@@ -49,6 +51,7 @@ export class SupervisorLoop {
   private launcher: TaskLauncher;
   private statusMonitor: TaskStatusMonitor;
   private globalLibrary: GlobalLibraryStore;
+  private taskStore: TaskStore;
   private running: boolean;
   private intervalId: ReturnType<typeof setInterval> | null;
   private restartCooldowns: Map<string, number>;
@@ -62,6 +65,7 @@ export class SupervisorLoop {
     this.launcher = new TaskLauncher();
     this.statusMonitor = new TaskStatusMonitor();
     this.globalLibrary = new GlobalLibraryStore();
+    this.taskStore = new TaskStore();
     this.running = false;
     this.intervalId = null;
     this.restartCooldowns = new Map();
@@ -276,8 +280,11 @@ export class SupervisorLoop {
 
     console.log(`[SupervisorLoop] ${taskId}: restarting (reason: ${reason}, attempt: ${count + 1})`);
 
+    // Get provider from task store
+    const provider = this.getTaskProvider(taskId);
+
     // Stop existing session
-    this.launcher.stop(taskId);
+    this.launcher.stop(taskId, provider);
 
     // Re-launch after a brief delay
     setTimeout(() => {
@@ -352,16 +359,15 @@ export class SupervisorLoop {
    * Build launch config for a task
    */
   private buildLaunchConfig(taskId: string, taskDir: string) {
-    // Read task from store to get skills and hooks
-    // For now, we'll get them from the status file's linked resources
-    const status = this.statusMonitor.readStatus(taskDir);
+    const task = this.taskStore.getTask(taskId);
     const globalLib = new GlobalLibraryStore();
 
     return {
       taskId,
       taskDir,
-      skills: [], // Will be populated from task store
-      hooks: [],   // Will be populated from task store
+      provider: task?.provider,
+      skills: task?.skills.filter((s: { enabled: boolean }) => s.enabled).map((s: { skill: string }) => s.skill) ?? [],
+      hooks: Object.values(task?.hooks ?? {}).flat(),
       rules: [],
       globalLibraryPath: globalLib.getGlobalPath(),
     };
@@ -465,12 +471,21 @@ export class SupervisorLoop {
     }
 
     // Stop the task
-    this.launcher.stop(taskId);
+    const provider = this.getTaskProvider(taskId);
+    this.launcher.stop(taskId, provider);
 
     // Remove from queue
     this.reviewQueue = this.reviewQueue.filter(r => r.taskId !== taskId);
 
     console.log(`[SupervisorLoop] ${taskId}: review rejected, task stopped`);
+  }
+
+  /**
+   * Get the provider for a task
+   */
+  private getTaskProvider(taskId: string): ProviderType {
+    const task = this.taskStore.getTask(taskId);
+    return task?.provider ?? 'claude';
   }
 
   /**

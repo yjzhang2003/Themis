@@ -32,7 +32,15 @@ export class TaskStore {
     if (existsSync(path)) {
       try {
         const content = readFileSync(path, 'utf-8');
-        return TasksIndexSchema.parse(JSON.parse(content));
+        const parsed = JSON.parse(content);
+        // Back-fill provider field for existing tasks
+        if (parsed.tasks) {
+          parsed.tasks = parsed.tasks.map((t: Record<string, unknown>) => ({
+            ...t,
+            provider: t.provider ?? 'claude',
+          }));
+        }
+        return TasksIndexSchema.parse(parsed);
       } catch (e) {
         console.error(`[TaskStore] Failed to parse ${path}:`, e instanceof Error ? e.message : e);
       }
@@ -80,7 +88,7 @@ export class TaskStore {
     return { ...task };
   }
 
-  createTask(name: string, taskPath: string, description?: string): Task {
+  createTask(name: string, taskPath: string, description?: string, provider: 'claude' | 'codex' = 'claude'): Task {
     const now = new Date().toISOString();
     const absPath = existsSync(taskPath) ? taskPath : join(process.cwd(), taskPath);
 
@@ -92,22 +100,35 @@ export class TaskStore {
       description,
       skills: [],
       hooks: {},
+      provider,
     };
 
     // Create .themis/ marker directory (CLI识别用)
     mkdirSync(getTaskMarkerPath(absPath), { recursive: true });
 
-    // Create .claude/ directory for Claude Code配置
-    const claudeDir = join(absPath, '.claude');
-    mkdirSync(claudeDir, { recursive: true });
-
-    // Write initial settings.json for Claude Code
-    const settingsPath = join(claudeDir, 'settings.json');
+    // Create provider-specific config directory
+    const configDir = provider === 'codex' ? '.codex' : '.claude';
+    const settingsFile = provider === 'codex' ? 'config.json' : 'settings.json';
+    const configPath = join(absPath, configDir);
+    mkdirSync(configPath, { recursive: true });
     writeFileSync(
-      settingsPath,
+      join(configPath, settingsFile),
       JSON.stringify({ skills: [], hooks: {} }, null, 2),
       'utf-8'
     );
+
+    // Also create scaffold for the other provider (for future switching)
+    const otherDir = provider === 'codex' ? '.claude' : '.codex';
+    const otherSettingsFile = provider === 'codex' ? 'settings.json' : 'config.json';
+    const otherPath = join(absPath, otherDir);
+    if (!existsSync(otherPath)) {
+      mkdirSync(otherPath, { recursive: true });
+      writeFileSync(
+        join(otherPath, otherSettingsFile),
+        JSON.stringify({ skills: [], hooks: {} }, null, 2),
+        'utf-8'
+      );
+    }
 
     // Add to index
     this.index.tasks.push(task);
@@ -133,14 +154,17 @@ export class TaskStore {
   }
 
   /**
-   * Sync task skills and hooks to .claude/settings.json
-   * Called when activating a task so Claude Code picks up the correct configuration
+   * Sync task skills and hooks to .claude/settings.json or .codex/config.json
+   * Called when activating a task so the AI CLI picks up the correct configuration
    */
   syncTaskResources(name: string): Task | null {
     const task = this.getTask(name);
     if (!task) return null;
 
-    const settingsPath = join(task.path, '.claude', 'settings.json');
+    const provider = task.provider ?? 'claude';
+    const configDir = provider === 'codex' ? '.codex' : '.claude';
+    const settingsFile = provider === 'codex' ? 'config.json' : 'settings.json';
+    const settingsPath = join(task.path, configDir, settingsFile);
 
     // Get skill paths from global library
     const globalLib = new GlobalLibraryStore();
@@ -181,10 +205,12 @@ export class TaskStore {
       rmSync(markerPath, { recursive: true, force: true });
     }
 
-    // Remove .claude/ directory (Claude Code配置)
-    const claudePath = join(task.path, '.claude');
-    if (existsSync(claudePath)) {
-      rmSync(claudePath, { recursive: true, force: true });
+    // Remove both .claude/ and .codex/ directories
+    for (const dir of ['.claude', '.codex'] as const) {
+      const configPath = join(task.path, dir);
+      if (existsSync(configPath)) {
+        rmSync(configPath, { recursive: true, force: true });
+      }
     }
 
     this.index.tasks.splice(idx, 1);

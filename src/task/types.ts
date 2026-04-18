@@ -17,15 +17,19 @@ export const TaskHooksSchema = z.record(
 );
 export type TaskHooks = z.infer<typeof TaskHooksSchema>;
 
+// Task provider type
+const TaskProviderSchema = z.enum(['claude', 'codex']).default('claude');
+
 // Simple task entry - stored in tasks.json
 export const TaskSchema = z.object({
-  name: z.string(),
+  name: z.string().regex(/^[a-zA-Z0-9_-]+$/, 'Task name must match /^[a-zA-Z0-9_-]+$/'),
   path: z.string(),           // Absolute path to task directory
   created_at: z.string(),
   status: TaskStatusSchema.default('paused'),
   description: z.string().optional(),
   skills: z.array(TaskSkillSchema).default([]),
   hooks: TaskHooksSchema.default({}),
+  provider: TaskProviderSchema.default('claude'),
 });
 export type Task = z.infer<typeof TaskSchema>;
 
