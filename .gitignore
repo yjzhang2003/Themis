@@ -6,3 +6,4 @@ node_modules/
 dist/
 frontend/.next/
 tsconfig.tsbuildinfo
+PLAN.md

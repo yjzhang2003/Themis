@@ -6,14 +6,43 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
 [![INK](https://img.shields.io/badge/INK-5.x-cyan.svg)](https://github.com/vadimdemedes/ink)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Status](https://img.shields.io/badge/Status-Development-orange.svg)]()
 
-**面向 Claude Code 的自主任务管理系统**
-
-*Per-task 隔离 · 全局技能库 · Supervisor 自主监控 · tmux 会话编排*
-
-[English](./README_EN.md) · [特性](#核心特性) · [快速开始](#快速开始) · [架构](#架构) · [贡献](#贡献)
+**⚠️ 开发中 · 暂不可用于生产环境**
 
 </div>
+
+---
+
+## 项目状态
+
+**Themis** 目前仍在积极开发中，尚未稳定，**不建议在生产环境中使用**。
+
+### 已实现功能 ✅
+
+目前仅完成了 **Claude Code Task 隔离** 这一核心特性的实现：
+
+- **Per-task `.claude/` 隔离**：每个任务拥有独立的 Claude Code 配置目录
+- **全局 Skills/Hooks 库**：在全局库中管理的 Skills 和 Hooks 可绑定到任意任务
+- **基础 CLI**：INK TUI 界面和命令行工具
+
+### 开发中的功能 🔨
+
+以下功能正在开发中，尚未完成：
+
+- 自动任务解析（根据任务描述自动规划执行步骤）
+- Skills/Hooks 分类装载（根据任务类型智能加载相关技能）
+- 任务流程优化（多阶段任务的状态管理与断点续传）
+- OpenSpec 深度集成（任务与项目规范的自动绑定）
+
+### 计划中的功能 📋
+
+以下功能在路线图中，尚未开始实现：
+
+- **Codex 支持**：支持 Anthropic 的 Codex CLI 作为另一个 Agent 后端
+- **多 CLI 协作**：支持 Claude Code、Codex 等多种 CLI 协同工作
+- **Supervisor 完全体**：全自动任务监控、自动修复、人工审核队列
+- **24×7 tmux 会话**：持久化运行、断开重连、跨会话上下文恢复
 
 ---
 
@@ -64,7 +93,7 @@ Launcher 为每个任务在 `/tmp` 下创建隔离的 HOME 目录，防止配置
 └── rules/
 ```
 
-### Supervisor 自主监控
+### Supervisor 自主监控（开发中）
 
 传统任务运行器只是"跑"，Supervisor 是"看"：
 
@@ -76,16 +105,16 @@ Launcher 为每个任务在 `/tmp` 下创建隔离的 HOME 目录，防止配置
 ┌─────────────────────────────────────────────┐
 │  SUPERVISOR LOOP                            │
 │                                             │
-│  ┌─────────┐    ┌─────────┐    ┌─────────┐ │
-│  │ Monitor │───▶│ Detector│───▶│ Executor│ │
-│  └────┬────┘    └────┬────┘    └────┬────┘ │
-│       │              │              │       │
-│       └──────────────┴──────────────┘       │
-│              状态反馈循环                     │
+│  ┌─────────┐    ┌─────────┐    ┌─────────┐│
+│  │ Monitor │───▶│ Detector│───▶│ Executor ││
+│  └────┬────┘    └────┬────┘    └────┬────┘│
+│       │              │              │      │
+│       └──────────────┴──────────────┘      │
+│              状态反馈循环 (开发中)            │
 └─────────────────────────────────────────────┘
 ```
 
-### tmux 会话编排
+### tmux 会话编排（计划中）
 
 任务运行在持久化的 tmux 会话中：
 
@@ -94,7 +123,7 @@ Launcher 为每个任务在 `/tmp` 下创建隔离的 HOME 目录，防止配置
 - 支持 attach/detach 切换
 - API 凭据自动合并
 
-### OpenSpec 集成
+### OpenSpec 集成（计划中）
 
 任务可绑定到 OpenSpec capability，形成可追溯的开发链路：
 
@@ -107,6 +136,8 @@ openspec:
 ---
 
 ## 快速开始
+
+> ⚠️ **仅供测试**：本项目处于开发阶段，如果你不是 contributor 或测试者，请等待稳定版本发布。
 
 ### 安装依赖
 
@@ -223,39 +254,13 @@ themis activate task-001
 
 ### 组件说明
 
-| 组件 | 职责 |
-|------|------|
-| `cli/` | INK TUI 和命令行接口 |
-| `task/` | 任务存储和元数据管理 |
-| `global-library/` | 全局技能/钩子/规则库 |
-| `openspec/` | OpenSpec 提案解析和绑定 |
-| `supervisor/` | 自主监控循环和任务重启 |
-
----
-
-## 文件结构
-
-```
-themis/
-├── bin/
-│   └── themis.js           # CLI 入口
-├── src/
-│   ├── cli/
-│   │   ├── commands/       # 命令模式实现
-│   │   ├── ui/            # INK UI 组件
-│   │   ├── context.tsx    # React Context
-│   │   └── index.tsx      # 主入口
-│   ├── task/              # 任务管理
-│   ├── global-library/    # 全局库
-│   ├── openspec/          # OpenSpec 集成
-│   └── supervisor/        # 自主监控
-├── tasks/                  # 任务工作区
-├── library/                # 共享资源库
-│   ├── skills/
-│   ├── hooks/
-│   └── rules/
-└── package.json
-```
+| 组件 | 状态 | 职责 |
+|------|------|------|
+| `cli/` | ✅ 完成 | INK TUI 和命令行接口 |
+| `task/` | ✅ 完成 | 任务存储和元数据管理 |
+| `global-library/` | ✅ 完成 | 全局技能/钩子/规则库 |
+| `openspec/` | 🔨 开发中 | OpenSpec 提案解析和绑定 |
+| `supervisor/` | 📋 计划中 | 自主监控循环和任务重启 |
 
 ---
 
@@ -275,19 +280,35 @@ themis/
 
 ## 路线图
 
-- [x] Phase 1: 基础 CLI 和任务管理
-- [x] Phase 2: Skills/Hooks/Rules 管理
-- [x] Phase 3: 交互式 CLI (INK TUI)
-- [x] Phase 3.5: 技能分类、搜索、分页
-- [ ] Phase 4: OpenSpec 集成
-- [ ] Phase 5: 24×7 tmux 会话
-- [ ] Phase 6: Supervisor 自动修复
+### 已完成
+
+- [x] Per-task `.claude/` 隔离
+- [x] 全局 Skills/Hooks/Rules 库
+- [x] 基础 CLI（TUI + 命令行）
+
+### 开发中
+
+- [ ] 自动任务解析
+- [ ] Skills/Hooks 分类装载
+- [ ] 任务流程优化（状态管理、断点续传）
+
+### 计划中
+
+- [ ] OpenSpec 深度集成
+- [ ] Codex CLI 支持
+- [ ] 多 CLI 协作
+- [ ] Supervisor 完全体
+- [ ] 24×7 tmux 会话
 
 ---
 
 ## 贡献
 
-欢迎提交 Issue 和 Pull Request！
+本项目欢迎贡献，但请注意：
+
+1. 本项目处于快速迭代阶段，API 可能有重大变更
+2. 请先提交 Issue 讨论重大更改
+3. PR 应包含充分的测试
 
 1. Fork 本仓库
 2. 创建特性分支 (`git checkout -b feature/amazing`)

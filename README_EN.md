@@ -6,14 +6,43 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
 [![INK](https://img.shields.io/badge/INK-5.x-cyan.svg)](https://github.com/vadimdemedes/ink)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Status](https://img.shields.io/badge/Status-Development-orange.svg)]()
 
-**Autonomous Task Management System for Claude Code**
-
-*Per-task Isolation · Global Skill Library · Supervisor Loop · tmux Orchestration*
-
-[中文](./README.md) · [Features](#features) · [Quick Start](#quick-start) · [Architecture](#architecture) · [Contributing](#contributing)
+**⚠️ In Development · Not Ready for Production Use**
 
 </div>
+
+---
+
+## Project Status
+
+**Themis is still in active development and is NOT stable. Do NOT use in production.**
+
+### Implemented ✅
+
+Only the **Claude Code Task Isolation** core feature is implemented:
+
+- **Per-task `.claude/` isolation**: Each task has its own Claude Code config directory
+- **Global Skills/Hooks library**: Skills and Hooks managed in global library can be bound to any task
+- **Basic CLI**: INK TUI interface and command-line tool
+
+### In Development 🔨
+
+The following features are being developed:
+
+- Automatic task parsing (auto-plan execution steps from task description)
+- Skills/Hooks categorized loading (intelligent loading based on task type)
+- Task flow optimization (multi-phase task state management and checkpoint resume)
+- Deep OpenSpec integration (auto-binding tasks to project specifications)
+
+### Planned 📋
+
+The following features are on the roadmap, not yet started:
+
+- **Codex support**: Support Anthropic's Codex CLI as another Agent backend
+- **Multi-CLI collaboration**: Support Claude Code, Codex, and other CLIs working together
+- **Full Supervisor**: Automated task monitoring, auto-repair, human review queue
+- **24×7 tmux sessions**: Persistent operation, reconnect on disconnect, cross-session context recovery
 
 ---
 
@@ -64,7 +93,7 @@ Skills, hooks, and rules live in a global library—write once, use everywhere:
 └── rules/
 ```
 
-### Supervisor Autonomous Loop
+### Supervisor Autonomous Loop (In Development)
 
 Traditional task runners just "run"—Supervisor "watches":
 
@@ -81,11 +110,11 @@ Traditional task runners just "run"—Supervisor "watches":
 │  └────┬────┘    └────┬────┘    └────┬────┘│
 │       │              │              │      │
 │       └──────────────┴──────────────┘      │
-│              State Feedback Loop            │
+│              State Feedback Loop (WIP)      │
 └─────────────────────────────────────────────┘
 ```
 
-### tmux Session Orchestration
+### tmux Session Orchestration (Planned)
 
 Tasks run in persistent tmux sessions:
 
@@ -94,7 +123,7 @@ Tasks run in persistent tmux sessions:
 - Attach/detach workflow
 - API credentials merged automatically
 
-### OpenSpec Integration
+### OpenSpec Integration (Planned)
 
 Tasks can bind to OpenSpec capabilities for traceable development:
 
@@ -107,6 +136,8 @@ openspec:
 ---
 
 ## Quick Start
+
+> ⚠️ **For Testing Only**: This project is in development. If you're not a contributor or tester, please wait for a stable release.
 
 ### Install Dependencies
 
@@ -223,13 +254,13 @@ themis activate task-001
 
 ### Component Map
 
-| Component | Responsibility |
-|-----------|----------------|
-| `cli/` | INK TUI and command interface |
-| `task/` | Task store and metadata |
-| `global-library/` | Global skills/hooks/rules |
-| `openspec/` | OpenSpec proposal parsing |
-| `supervisor/` | Autonomous monitoring loop |
+| Component | Status | Responsibility |
+|-----------|--------|----------------|
+| `cli/` | ✅ Done | INK TUI and command interface |
+| `task/` | ✅ Done | Task store and metadata |
+| `global-library/` | ✅ Done | Global skills/hooks/rules |
+| `openspec/` | 🔨 WIP | OpenSpec proposal parsing |
+| `supervisor/` | 📋 Planned | Autonomous monitoring loop |
 
 ---
 
@@ -249,19 +280,35 @@ themis activate task-001
 
 ## Roadmap
 
-- [x] Phase 1: Foundation - Basic CLI and task management
-- [x] Phase 2: Skills/Hooks/Rules management
-- [x] Phase 3: Interactive CLI (INK TUI)
-- [x] Phase 3.5: Skill categorization, search, pagination
-- [ ] Phase 4: OpenSpec integration
-- [ ] Phase 5: 24×7 tmux sessions
-- [ ] Phase 6: Supervisor auto-repair
+### Implemented
+
+- [x] Per-task `.claude/` isolation
+- [x] Global Skills/Hooks/Rules library
+- [x] Basic CLI (TUI + command-line)
+
+### In Development
+
+- [ ] Automatic task parsing
+- [ ] Skills/Hooks categorized loading
+- [ ] Task flow optimization (state management, checkpoint resume)
+
+### Planned
+
+- [ ] Deep OpenSpec integration
+- [ ] Codex CLI support
+- [ ] Multi-CLI collaboration
+- [ ] Full Supervisor
+- [ ] 24×7 tmux sessions
 
 ---
 
 ## Contributing
 
-Issues and Pull Requests are welcome!
+Contributions welcome, but note:
+
+1. This project is in rapid iteration; API may have breaking changes
+2. Please open an Issue to discuss major changes first
+3. PRs should include adequate tests
 
 1. Fork the repository
 2. Create your branch (`git checkout -b feature/amazing`)
