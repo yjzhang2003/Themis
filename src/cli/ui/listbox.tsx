@@ -95,14 +95,29 @@ export function ListBox({
         return;
       }
 
-      // Enter - select (don't trim!)
+      // Enter - select current item
       if (data === '\r' || data === '\n') {
-        if (multiSelect && selectedIds.length > 0 && onConfirm) {
-          onConfirm();
-        } else if (items[selectedIndex]) {
-          items[selectedIndex].onSelect();
+        if (items[selectedIndex]) {
+          if (multiSelect) {
+            // In multi-select mode, Enter toggles current item selection
+            if (onToggleSelect) {
+              onToggleSelect(items[selectedIndex].id);
+              // Move to next item after selection
+              setSelectedIndex((prev) => Math.min(items.length - 1, prev + 1));
+            }
+          } else {
+            items[selectedIndex].onSelect();
+          }
         }
         return;
+      }
+
+      // Ctrl+Enter - confirm selection in multi-select mode
+      if (data === '\r\n' || data === '\n\r' || s === '\x1b\r' || s === '\r\x1b') {
+        if (multiSelect && selectedIds.length > 0 && onConfirm) {
+          onConfirm();
+          return;
+        }
       }
     };
 
