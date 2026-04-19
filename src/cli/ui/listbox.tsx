@@ -114,27 +114,23 @@ export function ListBox({
         return;
       }
 
-      // Enter - select current item
+      // Enter - confirm and go to next step, or toggle if no onConfirm
       if (data === '\r' || data === '\n') {
-        if (currentItems[currentIndex]) {
-          if (multiSelect) {
-            if (onToggleSelect) {
-              onToggleSelect(currentItems[currentIndex].id);
-              setSelectedIndex((prev) => Math.min(currentItems.length - 1, prev + 1));
-            }
+        if (multiSelect && onConfirm) {
+          // Enter confirms and goes to next step
+          if (selectedIds.length > 0) {
+            onConfirm();
+          }
+        } else if (currentItems[currentIndex]) {
+          if (multiSelect && onToggleSelect) {
+            // No onConfirm, so Enter toggles selection
+            onToggleSelect(currentItems[currentIndex].id);
+            setSelectedIndex((prev) => Math.min(currentItems.length - 1, prev + 1));
           } else {
             currentItems[currentIndex].onSelect();
           }
         }
         return;
-      }
-
-      // Ctrl+Enter - confirm selection in multi-select mode
-      if (data === '\r\n' || data === '\n\r' || s === '\x1b\r' || s === '\r\x1b') {
-        if (multiSelect && selectedIds.length > 0 && onConfirm) {
-          onConfirm();
-          return;
-        }
       }
     };
 

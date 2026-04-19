@@ -1299,7 +1299,7 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
         </Box>
         <Text dimColor paddingX={1}>
           {selectedSkillIds.length > 0
-            ? `${selectedSkillIds.length} selected - press [Enter] to add`
+            ? `${selectedSkillIds.length} selected - press [Enter] to continue`
             : 'Press [Space] to select, [←/→] to page'}
         </Text>
 
@@ -1337,7 +1337,7 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
             </Text>
           )}
           {selectedSkillIds.length > 0 && (
-            <Text color="cyan">[Enter] Add selected ({selectedSkillIds.length})</Text>
+            <Text color="cyan">[Enter] Continue ({selectedSkillIds.length} selected)</Text>
           )}
           <Text dimColor>[Esc] Back to categories</Text>
         </Box>
