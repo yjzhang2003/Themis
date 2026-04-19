@@ -34,16 +34,18 @@ export function ListBox({
 }: ListBoxProps) {
   const [selectedIndex, setSelectedIndex] = useState(initialIndex);
   const [keyHandler, setKeyHandler] = useState<((key: string) => void) | null>(null);
-  const lastItemsLength = useRef(items.length);
+  const initialIndexRef = useRef(initialIndex);
 
-  // Only reset selectedIndex when items length changes (e.g., page change)
-  // Don't reset when items is recreated with same length (normal re-render)
+  // Only reset when key changes (indicating different list content, like pagination)
   useEffect(() => {
-    if (items.length !== lastItemsLength.current) {
+    if (keyHandler === null) {
+      // First mount - use current initialIndex
+    } else if (initialIndex !== initialIndexRef.current) {
+      // initialIndex changed externally (like pagination) - reset cursor
       setSelectedIndex(initialIndex);
-      lastItemsLength.current = items.length;
+      initialIndexRef.current = initialIndex;
     }
-  }, [items.length, initialIndex]);
+  }, [initialIndex, keyHandler]);
 
   // Set up key listener similar to menu.tsx
   useEffect(() => {
