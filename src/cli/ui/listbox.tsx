@@ -124,7 +124,7 @@ export function ListBox({
         // Ignore cleanup errors
       }
     };
-  }, [items, selectedIndex, onBack, onNextPage, onPrevPage, multiSelect, onToggleSelect]);
+  }, [items, onBack, onNextPage, onPrevPage, multiSelect, onToggleSelect]);
 
   if (items.length === 0) {
     return (

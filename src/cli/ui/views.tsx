@@ -516,7 +516,7 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
         </Box>
 
         <ListBox
-          key={`suite-create-skills-${refreshKey}-${suiteDraftSkillPage}`}
+          key={`suite-create-skills-${refreshKey}-page-${suiteDraftSkillPage}`}
           items={result.skills.map((skill) => ({
             id: skill.id,
             label: skill.name,
@@ -532,6 +532,8 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
           }}
           onConfirm={() => setView('suite-create-confirm')}
           onBack={() => setView('suite-create-name')}
+          onNextPage={() => setSuiteDraftSkillPage((p) => Math.min(result.totalPages, p + 1))}
+          onPrevPage={() => setSuiteDraftSkillPage((p) => Math.max(1, p - 1))}
         />
 
         <Box marginTop={1} flexDirection="column">
@@ -1302,7 +1304,7 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
         </Text>
 
         <ListBox
-          key={`skill-select-category-${refreshKey}`}
+          key={`skill-select-category-${refreshKey}-${selectSkillPage}`}
           items={availableSkills.map((s) => ({
             id: s.id,
             label: s.name,
