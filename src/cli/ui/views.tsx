@@ -12,6 +12,7 @@ import { SupervisorConfigManager } from '../../supervisor/config.js';
 import { SupervisorLoop } from '../../supervisor/supervisor-loop.js';
 import { getProvider } from '../../supervisor/providers/base.js';
 import type { ProviderType } from '../../supervisor/providers/base.js';
+import { SuiteStore } from '../../suite/store.js';
 import { ListBox } from './listbox.js';
 import { useCLI } from '../context.js';
 
@@ -28,6 +29,7 @@ type View =
   | 'task-create'
   | 'task-create-current-dir'
   | 'task-create-provider'
+  | 'task-create-suite'
   | 'task-delete-confirm'
   | 'skills'
   | 'skill-categories'
@@ -39,6 +41,9 @@ type View =
   | 'hook-create'
   | 'hook-select'
   | 'hook-select-type'
+  | 'suites'
+  | 'suite-detail'
+  | 'suite-create'
   | 'sessions'
   | 'supervisor'
   | 'supervisor-reviews'
@@ -121,6 +126,13 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
   const [selectedProvider, setSelectedProvider] = useState<'claude' | 'codex'>('claude');
   const [selectedHookIds, setSelectedHookIds] = useState<string[]>([]);
 
+  // Suite management state
+  const [selectedSuiteId, setSelectedSuiteId] = useState<string | null>(null);
+  const [suiteDraftName, setSuiteDraftName] = useState('');
+  const [suiteDraftSkills, setSuiteDraftSkills] = useState<string[]>([]);
+  const suiteStore = new SuiteStore();
+  suiteStore.ensureDirectories();
+
   // CLI context
   const { workspaceRoot } = useCLI();
 
@@ -167,6 +179,12 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
               label: 'Global Resources',
               description: `${globalSkills.length} skills, ${globalHooks.length} hooks, ${globalRules.length} rules`,
               onSelect: () => setView('global-resources'),
+            },
+            {
+              id: 'suites',
+              label: 'Skill Suites',
+              description: 'Manage skill suites for quick task setup',
+              onSelect: () => setView('suites'),
             },
             {
               id: 'tasks',
@@ -407,6 +425,218 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
 
         <Box marginTop={1} flexDirection="column">
           <Text dimColor>[Esc] Back to Global Resources</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Skill Suites - List
+  if (view === 'suites') {
+    const suites = suiteStore.listSuites();
+    return (
+      <Box key="suites" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>SKILL SUITES</Text>
+          <Text dimColor> - ~/.themis/suites.json</Text>
+        </Box>
+
+        <ListBox
+          key={`suites-${refreshKey}`}
+          items={[
+            {
+              id: 'suite-create',
+              label: '+ Create Suite',
+              description: 'Create a new skill suite',
+              onSelect: () => {
+                setSuiteDraftName('');
+                setSuiteDraftSkills([]);
+                setView('suite-create');
+              },
+            },
+            ...suites.map((suite) => ({
+              id: suite.id,
+              label: suite.name,
+              description: `${suite.skills.length} skills - ${suite.description || '(no description)'}`,
+              onSelect: () => {
+                setSelectedSuiteId(suite.id);
+                setView('suite-detail');
+              },
+            })),
+          ]}
+          onBack={() => setView('main')}
+        />
+
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor>[Esc] Back to main menu</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Suite Create
+  if (view === 'suite-create') {
+    const allSkills = globalLibrary.listSkills();
+    const canSave = suiteDraftName.length > 0 && suiteDraftSkills.length > 0;
+
+    return (
+      <Box key="suite-create" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>CREATE SUITE</Text>
+        </Box>
+
+        <Box paddingX={1} flexDirection="column">
+          <Text>
+            Suite Name:{' '}
+            <Text color="cyan">{suiteDraftName || '(not set)'}</Text>
+          </Text>
+          <Text dimColor>
+            Selected skills: {suiteDraftSkills.length} (use [space] to toggle)
+          </Text>
+        </Box>
+
+        <ListBox
+          key={`suite-create-${refreshKey}`}
+          items={[
+            {
+              id: 'name',
+              label: suiteDraftName || 'Enter Suite Name',
+              description: 'Click to set suite name',
+              onSelect: () => {},
+            },
+            {
+              id: 'divider-name',
+              label: '─── Skills ───',
+              description: '',
+              onSelect: () => {},
+            },
+            ...allSkills.map((skill) => ({
+              id: skill.id,
+              label: skill.name,
+              description: `[${skill.provider}] ${skill.description?.substring(0, 40) || ''}`.trim(),
+              onSelect: () => {
+                // Single click navigates, multi-select handled by space
+              },
+            })),
+            {
+              id: 'divider-actions',
+              label: '─── Actions ───',
+              description: '',
+              onSelect: () => {},
+            },
+            {
+              id: 'save',
+              label: 'Save Suite',
+              description: canSave
+                ? `Save "${suiteDraftName}" with ${suiteDraftSkills.length} skills`
+                : 'Set name and select skills first',
+              onSelect: () => {
+                if (canSave) {
+                  const skills = suiteDraftSkills.map((id) => {
+                    const skill = allSkills.find((s) => s.id === id);
+                    return { id, provider: skill?.provider || 'universal' as const };
+                  });
+                  suiteStore.createSuite({
+                    name: suiteDraftName,
+                    description: '',
+                    skills,
+                  });
+                  setSuiteDraftName('');
+                  setSuiteDraftSkills([]);
+                  refresh();
+                  setView('suites');
+                }
+              },
+            },
+          ]}
+          multiSelect={true}
+          selectedIds={suiteDraftSkills}
+          onToggleSelect={(id) => {
+            if (id === 'name' || id.startsWith('divider')) return;
+            setSuiteDraftSkills((prev) =>
+              prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+            );
+          }}
+          onBack={() => setView('suites')}
+        />
+
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor>[Space] Toggle skill selection</Text>
+          <Text dimColor>[Esc] Cancel and go back</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Suite Detail
+  if (view === 'suite-detail' && selectedSuiteId) {
+    const suite = suiteStore.getSuite(selectedSuiteId);
+    if (!suite) {
+      setView('suites');
+      return null;
+    }
+
+    const allSkills = globalLibrary.listSkills();
+
+    return (
+      <Box key="suite-detail" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>SUITE: </Text>
+          <Text>{suite.name}</Text>
+        </Box>
+
+        <Box paddingX={1} flexDirection="column">
+          <Text>ID: <Text color="cyan">{suite.id}</Text></Text>
+          {suite.description && <Text>Description: {suite.description}</Text>}
+          <Text dimColor>Created: {new Date(suite.created_at).toLocaleDateString()}</Text>
+        </Box>
+
+        <Box marginTop={1} flexDirection="column">
+          <Text bold>Skills ({suite.skills.length}):</Text>
+          {suite.skills.length === 0 ? (
+            <Text dimColor>No skills in this suite</Text>
+          ) : (
+            suite.skills.map((skill) => {
+              const skillInfo = allSkills.find((s) => s.id === skill.id);
+              return (
+                <Box key={skill.id} marginTop={1}>
+                  <Text>
+                    <Text color="cyan">[{skill.provider}]</Text>{' '}
+                    {skillInfo?.name || skill.id}
+                  </Text>
+                </Box>
+              );
+            })
+          )}
+        </Box>
+
+        <ListBox
+          key={`suite-detail-${refreshKey}`}
+          items={[
+            {
+              id: 'apply',
+              label: 'Apply to Task',
+              description: 'Apply this suite to an existing task',
+              onSelect: () => {
+                setView('tasks');
+              },
+            },
+            {
+              id: 'delete',
+              label: 'Delete Suite',
+              description: 'Delete this suite permanently',
+              onSelect: () => {
+                suiteStore.deleteSuite(selectedSuiteId);
+                refresh();
+                setSelectedSuiteId(null);
+                setView('suites');
+              },
+            },
+          ]}
+          onBack={() => setView('suites')}
+        />
+
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor>[Esc] Back to suites</Text>
         </Box>
       </Box>
     );
@@ -769,10 +999,7 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
               description: 'Anthropic Claude Code (default)',
               onSelect: () => {
                 setSelectedProvider('claude');
-                store.createTask(selectedTaskName, workspaceRoot, undefined, 'claude');
-                refresh();
-                setSelectedTaskName(null);
-                setView('tasks');
+                setView('task-create-suite');
               },
             },
             {
@@ -781,14 +1008,64 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
               description: 'OpenAI Codex CLI',
               onSelect: () => {
                 setSelectedProvider('codex');
-                store.createTask(selectedTaskName, workspaceRoot, undefined, 'codex');
-                refresh();
-                setSelectedTaskName(null);
-                setView('tasks');
+                setView('task-create-suite');
               },
             },
           ]}
           onBack={() => setView('task-create-current-dir')}
+        />
+
+        <Box marginTop={1}>
+          <Text dimColor>[Esc] Go back</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Task Create - Step 4: Select suite (optional)
+  if (view === 'task-create-suite' && selectedTaskName) {
+    const suites = suiteStore.listSuites();
+    return (
+      <Box key="task-create-suite" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>CREATE TASK</Text>
+        </Box>
+        <Box paddingX={1} flexDirection="column">
+          <Text>Task name: <Text color="cyan">{selectedTaskName}</Text></Text>
+          <Text>Provider: <Text color="cyan">{selectedProvider}</Text></Text>
+          <Text dimColor>Current directory: {workspaceRoot}</Text>
+        </Box>
+        <Box marginTop={1} flexDirection="column">
+          <Text>Apply a Skill Suite? (optional)</Text>
+        </Box>
+
+        <ListBox
+          key={`task-create-suite-${refreshKey}`}
+          items={[
+            ...(suites.length > 0
+              ? [
+                  {
+                    id: 'use-suite',
+                    label: 'Use a Suite',
+                    description: `Choose from ${suites.length} available suite${suites.length !== 1 ? 's' : ''}`,
+                    onSelect: () => setView('suites'),
+                  },
+                ]
+              : []),
+            {
+              id: 'no-suite',
+              label: 'No Suite',
+              description: 'Create task with default settings',
+              onSelect: () => {
+                store.createTask(selectedTaskName, workspaceRoot, undefined, selectedProvider);
+                refresh();
+                setSelectedTaskName(null);
+                setSelectedSuiteId(null);
+                setView('tasks');
+              },
+            },
+          ]}
+          onBack={() => setView('task-create-provider')}
         />
 
         <Box marginTop={1}>

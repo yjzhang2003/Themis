@@ -24,6 +24,18 @@ import { OpenSpecCommand } from './commands/openspec.js';
 import { GlobalCommand } from './commands/global.js';
 import { SupervisorCommand, SessionCommand } from './commands/session.js';
 import { TakeoverCommand } from './commands/takeover.js';
+import {
+  SuiteListCommand,
+  SuiteAddCommand,
+  SuiteDeleteCommand,
+  SuiteApplyCommand,
+} from './commands/suite.js';
+import {
+  LibraryListCommand,
+  LibraryAddCommand,
+  LibraryRemoveCommand,
+  LibraryPromoteCommand,
+} from './commands/library.js';
 import { InteractiveApp } from './ui/views.js';
 
 export { TaskStore } from '../task/store.js';
@@ -102,6 +114,74 @@ function CLI() {
               <Text color="cyan">themis hook unlink &lt;hook-id&gt; &lt;task-name&gt;</Text> - Unlink hook from task
             </Text>
             <Text dimColor>Use themis global hook list to browse available hooks</Text>
+          </Box>
+        );
+    }
+  }
+
+  // Suite commands
+  if (command === 'suite') {
+    switch (subcommand) {
+      case 'list':
+      case 'ls':
+        return <SuiteListCommand store={store} args={args} />;
+      case 'add':
+        return <SuiteAddCommand store={store} args={args} />;
+      case 'delete':
+      case 'rm':
+        return <SuiteDeleteCommand store={store} args={args} />;
+      case 'apply':
+        return <SuiteApplyCommand store={store} args={args} />;
+      default:
+        return (
+          <Box flexDirection="column" padding={1}>
+            <Text bold>Suite Commands</Text>
+            <Text>
+              <Text color="cyan">themis suite list</Text> - List all suites
+            </Text>
+            <Text>
+              <Text color="cyan">themis suite add &lt;name&gt;</Text> - Create a new suite
+            </Text>
+            <Text>
+              <Text color="cyan">themis suite delete &lt;id&gt;</Text> - Delete a suite
+            </Text>
+            <Text>
+              <Text color="cyan">themis suite apply &lt;suite-id&gt; &lt;task-name&gt;</Text> - Apply suite to task
+            </Text>
+          </Box>
+        );
+    }
+  }
+
+  // Library commands
+  if (command === 'library') {
+    switch (subcommand) {
+      case 'list':
+      case 'ls':
+        return <LibraryListCommand args={args} />;
+      case 'add':
+        return <LibraryAddCommand args={args} />;
+      case 'remove':
+      case 'rm':
+        return <LibraryRemoveCommand args={args} />;
+      case 'promote':
+        return <LibraryPromoteCommand args={args} />;
+      default:
+        return (
+          <Box flexDirection="column" padding={1}>
+            <Text bold>Universal Library Commands</Text>
+            <Text>
+              <Text color="cyan">themis library list</Text> - List universal skills
+            </Text>
+            <Text>
+              <Text color="cyan">themis library add &lt;path&gt;</Text> - Add skill to universal library
+            </Text>
+            <Text>
+              <Text color="cyan">themis library remove &lt;skill-id&gt;</Text> - Remove skill from universal library
+            </Text>
+            <Text>
+              <Text color="cyan">themis library promote &lt;skill-id&gt;</Text> - Promote Claude Code skill to universal
+            </Text>
           </Box>
         );
     }

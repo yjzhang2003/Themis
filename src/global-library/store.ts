@@ -9,6 +9,7 @@ export interface GlobalSkill {
   name: string;
   description: string;
   category: string;
+  provider: 'claude' | 'codex' | 'universal';
   content?: string;
   created_at: string;
   updated_at: string;
@@ -35,14 +36,29 @@ export interface GlobalRule {
 
 export class GlobalLibraryStore {
   private globalPath: string;
+  private themisPath: string;
+  private readonly UNIVERSAL_SKILLS_DIR = 'library/skills';
 
   constructor() {
     // Claude Code stores skills, hooks, rules directly under ~/.claude/
     this.globalPath = join(homedir(), '.claude');
+    this.themisPath = join(homedir(), '.themis');
   }
 
   getGlobalPath(): string {
     return this.globalPath;
+  }
+
+  getThemisPath(): string {
+    return this.themisPath;
+  }
+
+  getUniversalLibraryPath(): string {
+    return join(this.themisPath, this.UNIVERSAL_SKILLS_DIR);
+  }
+
+  ensureUniversalLibrary(): void {
+    mkdirSync(this.getUniversalLibraryPath(), { recursive: true });
   }
 
   ensureDirectories(): void {
@@ -54,44 +70,64 @@ export class GlobalLibraryStore {
 
   // Skills
   listSkills(): GlobalSkill[] {
-    const skillsDir = join(this.globalPath, 'skills');
-    if (!existsSync(skillsDir)) return [];
-
     const skills: GlobalSkill[] = [];
-    const entries = readdirSync(skillsDir);
 
-    for (const entry of entries) {
-      const entryPath = join(skillsDir, entry);
-      const stat = statSync(entryPath);
+    // List Claude Code skills
+    const ccSkillsDir = join(this.globalPath, 'skills');
+    if (existsSync(ccSkillsDir)) {
+      const ccEntries = readdirSync(ccSkillsDir);
+      for (const entry of ccEntries) {
+        const entryPath = join(ccSkillsDir, entry);
+        const stat = statSync(entryPath);
 
-      if (stat.isDirectory()) {
-        // Directory format with SKILL.md
-        const skillMdPath = join(entryPath, 'SKILL.md');
-        if (existsSync(skillMdPath)) {
-          const skill = this.parseSkillMd(skillMdPath, entry);
+        if (stat.isDirectory()) {
+          const skillMdPath = join(entryPath, 'SKILL.md');
+          if (existsSync(skillMdPath)) {
+            const skill = this.parseSkillMd(skillMdPath, entry, 'claude');
+            if (skill) skills.push(skill);
+          }
+        } else if (entry.endsWith('.yaml') || entry.endsWith('.yml')) {
+          const skill = this.parseSkillYaml(join(ccSkillsDir, entry), 'claude');
           if (skill) skills.push(skill);
         }
-      } else if (entry.endsWith('.yaml') || entry.endsWith('.yml')) {
-        // Legacy YAML format
-        const skill = this.parseSkillYaml(join(skillsDir, entry));
-        if (skill) skills.push(skill);
+      }
+    }
+
+    // List Universal skills from ~/.themis/library/skills/
+    const universalSkillsDir = this.getUniversalLibraryPath();
+    if (existsSync(universalSkillsDir)) {
+      const universalEntries = readdirSync(universalSkillsDir);
+      for (const entry of universalEntries) {
+        const entryPath = join(universalSkillsDir, entry);
+        const stat = statSync(entryPath);
+
+        if (stat.isDirectory()) {
+          const skillMdPath = join(entryPath, 'SKILL.md');
+          if (existsSync(skillMdPath)) {
+            const skill = this.parseSkillMd(skillMdPath, entry, 'universal');
+            if (skill) skills.push(skill);
+          }
+        } else if (entry.endsWith('.yaml') || entry.endsWith('.yml')) {
+          const skill = this.parseSkillYaml(join(universalSkillsDir, entry), 'universal');
+          if (skill) skills.push(skill);
+        }
       }
     }
 
     return skills;
   }
 
-  private parseSkillMd(filePath: string, id: string): GlobalSkill | null {
+  private parseSkillMd(filePath: string, id: string, provider: 'claude' | 'codex' | 'universal' = 'claude'): GlobalSkill | null {
     try {
       const content = readFileSync(filePath, 'utf-8');
-      const skill = this.parseSkillFromContent(content, id);
+      const skill = this.parseSkillFromContent(content, id, provider);
       return skill;
     } catch {
       return null;
     }
   }
 
-  private parseSkillFromContent(content: string, id: string): GlobalSkill | null {
+  private parseSkillFromContent(content: string, id: string, provider: 'claude' | 'codex' | 'universal' = 'claude'): GlobalSkill | null {
     // Parse YAML frontmatter
     const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
     let metadata: Record<string, unknown> = {};
@@ -117,26 +153,33 @@ export class GlobalLibraryStore {
     const scaffold = metadata.scaffold as Record<string, unknown> | undefined;
     const category = (scaffold?.category as string) || 'uncategorized';
 
+    // Provider from frontmatter overrides the default
+    const frontmatterProvider = metadata.provider as 'claude' | 'codex' | 'universal' | undefined;
+    const finalProvider = frontmatterProvider || provider;
+
     return {
       id,
       name,
       description,
       category,
+      provider: finalProvider,
       content: content,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
   }
 
-  private parseSkillYaml(filePath: string): GlobalSkill | null {
+  private parseSkillYaml(filePath: string, provider: 'claude' | 'codex' | 'universal' = 'claude'): GlobalSkill | null {
     try {
       const content = readFileSync(filePath, 'utf-8');
       const parsed = YAML.parse(content);
+      const frontmatterProvider = parsed.provider as 'claude' | 'codex' | 'universal' | undefined;
       return {
         id: parsed.id || basename(filePath, '.yaml'),
         name: parsed.name || parsed.id || basename(filePath, '.yaml'),
         description: parsed.description || '',
         category: parsed.category || 'uncategorized',
+        provider: frontmatterProvider || provider,
         content: parsed.content,
         created_at: parsed.created_at || new Date().toISOString(),
         updated_at: parsed.updated_at || new Date().toISOString(),
@@ -149,19 +192,78 @@ export class GlobalLibraryStore {
   getSkill(id: string): GlobalSkill | null {
     const skillsDir = join(this.globalPath, 'skills');
 
-    // Check directory format
+    // Check directory format in Claude Code skills
     const dirPath = join(skillsDir, id, 'SKILL.md');
     if (existsSync(dirPath)) {
-      return this.parseSkillMd(dirPath, id);
+      return this.parseSkillMd(dirPath, id, 'claude');
     }
 
-    // Check YAML format
+    // Check YAML format in Claude Code skills
     const yamlPath = join(skillsDir, `${id}.yaml`);
     if (existsSync(yamlPath)) {
-      return this.parseSkillYaml(yamlPath);
+      return this.parseSkillYaml(yamlPath, 'claude');
+    }
+
+    // Check universal library
+    const universalDir = join(this.getUniversalLibraryPath(), id, 'SKILL.md');
+    if (existsSync(universalDir)) {
+      return this.parseSkillMd(universalDir, id, 'universal');
+    }
+
+    const universalYaml = join(this.getUniversalLibraryPath(), `${id}.yaml`);
+    if (existsSync(universalYaml)) {
+      return this.parseSkillYaml(universalYaml, 'universal');
     }
 
     return null;
+  }
+
+  // Universal skill methods
+  getUniversalSkillPath(id: string): string | null {
+    const universalDir = join(this.getUniversalLibraryPath(), id);
+    if (existsSync(universalDir)) {
+      return universalDir;
+    }
+    const universalYaml = join(this.getUniversalLibraryPath(), `${id}.yaml`);
+    if (existsSync(universalYaml)) {
+      return universalYaml;
+    }
+    return null;
+  }
+
+  installUniversalSkill(sourcePath: string, name?: string): GlobalSkill {
+    this.ensureUniversalLibrary();
+    const universalDir = join(this.getUniversalLibraryPath());
+    const id = name || basename(sourcePath);
+    const destDir = join(universalDir, id);
+
+    const stat = statSync(sourcePath);
+    if (stat.isDirectory()) {
+      mkdirSync(destDir, { recursive: true });
+      const entries = readdirSync(sourcePath);
+      for (const entry of entries) {
+        copyFileSync(join(sourcePath, entry), join(destDir, entry));
+      }
+    } else if (sourcePath.endsWith('.md') || sourcePath.endsWith('.yaml')) {
+      mkdirSync(destDir, { recursive: true });
+      copyFileSync(sourcePath, join(destDir, 'SKILL.md'));
+    }
+
+    return this.getSkill(id)!;
+  }
+
+  removeUniversalSkill(id: string): boolean {
+    const dirPath = join(this.getUniversalLibraryPath(), id);
+    if (existsSync(dirPath)) {
+      rmSync(dirPath, { recursive: true, force: true });
+      return true;
+    }
+    const yamlPath = join(this.getUniversalLibraryPath(), `${id}.yaml`);
+    if (existsSync(yamlPath)) {
+      rmSync(yamlPath, { force: true });
+      return true;
+    }
+    return false;
   }
 
   installSkill(sourcePath: string, name?: string): GlobalSkill {
@@ -373,6 +475,12 @@ export class GlobalLibraryStore {
 
   // Get full path to a skill directory or file
   getSkillPath(id: string): string | null {
+    // Check universal library first (higher priority)
+    const universalPath = this.getUniversalSkillPath(id);
+    if (universalPath) {
+      return universalPath;
+    }
+
     const skillsDir = join(this.globalPath, 'skills');
 
     // Check directory format first

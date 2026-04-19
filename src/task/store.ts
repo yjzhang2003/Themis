@@ -1,8 +1,9 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import { Task, TasksIndexSchema } from './types.js';
+import { Task, TasksIndex, TasksIndexSchema } from './types.js';
 import { GlobalLibraryStore } from '../global-library/index.js';
+import { SuiteStore } from '../suite/index.js';
 
 const MAIN_DIR = '.themis';
 const TASKS_FILE = 'tasks.json';
@@ -21,13 +22,13 @@ function getTaskMarkerPath(taskPath: string): string {
 }
 
 export class TaskStore {
-  private index: TasksIndexSchema;
+  private index: TasksIndex;
 
   constructor() {
     this.index = this.loadIndex();
   }
 
-  private loadIndex(): TasksIndexSchema {
+  private loadIndex(): TasksIndex {
     const path = getTasksFilePath();
     if (existsSync(path)) {
       try {
@@ -88,7 +89,7 @@ export class TaskStore {
     return { ...task };
   }
 
-  createTask(name: string, taskPath?: string, description?: string, provider: 'claude' | 'codex' = 'claude'): Task {
+  createTask(name: string, taskPath?: string, description?: string, provider: 'claude' | 'codex' = 'claude', suiteId?: string): Task {
     const now = new Date().toISOString();
     const absPath = taskPath ? (existsSync(taskPath) ? taskPath : join(process.cwd(), taskPath)) : join(process.cwd(), name);
 
@@ -101,6 +102,7 @@ export class TaskStore {
       skills: [],
       hooks: {},
       provider,
+      suite_id: suiteId,
     };
 
     // Create .themis/ marker directory (CLI识别用)
@@ -130,6 +132,12 @@ export class TaskStore {
       );
     }
 
+    // Apply suite if provided
+    if (suiteId) {
+      const suiteStore = new SuiteStore();
+      suiteStore.applySuiteToTask(suiteId, name, absPath, provider);
+    }
+
     // Add to index
     this.index.tasks.push(task);
     this.saveIndex();
@@ -151,6 +159,20 @@ export class TaskStore {
     this.index.tasks[idx] = updated;
     this.saveIndex();
     return { ...updated };
+  }
+
+  /**
+   * Apply a suite to an existing task
+   */
+  bindSuite(taskName: string, suiteId: string): Task | null {
+    const task = this.getTask(taskName);
+    if (!task) return null;
+
+    const suiteStore = new SuiteStore();
+    const success = suiteStore.applySuiteToTask(suiteId, taskName, task.path, task.provider);
+    if (!success) return null;
+
+    return this.updateTask(taskName, { suite_id: suiteId });
   }
 
   /**
