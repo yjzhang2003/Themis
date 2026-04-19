@@ -20,26 +20,28 @@
 
 ### Implemented ✅
 
-Only the **Claude Code Task Isolation** core feature is implemented:
+Core features for task isolation and skill management:
 
-- **Per-task `.claude/` isolation**: Each task has its own Claude Code config directory
+- **Per-task `.claude/`/`.codex/` isolation**: Each task has its own Claude Code or Codex config directory
 - **Global Skills/Hooks library**: Skills and Hooks managed in global library can be bound to any task
+- **Universal Skills**: Skills that work with both Claude Code and Codex, stored in a unified library
+- **Skill Suites**: Bundle multiple skills and apply them to tasks in one click
+- **Provider Selection**: Choose between Claude Code and Codex when creating tasks
 - **Basic CLI**: INK TUI interface and command-line tool
 
 ### In Development 🔨
 
 The following features are being developed:
 
+- Deep OpenSpec integration (auto-binding tasks to project specifications)
+- Hooks in Skill Suites (CC/Codex formats differ, deferred)
 - Automatic task parsing (auto-plan execution steps from task description)
 - Skills/Hooks categorized loading (intelligent loading based on task type)
-- Task flow optimization (multi-phase task state management and checkpoint resume)
-- Deep OpenSpec integration (auto-binding tasks to project specifications)
 
 ### Planned 📋
 
 The following features are on the roadmap, not yet started:
 
-- **Codex support**: Support Anthropic's Codex CLI as another Agent backend
 - **Multi-CLI collaboration**: Support Claude Code, Codex, and other CLIs working together
 - **Full Supervisor**: Automated task monitoring, auto-repair, human review queue
 - **24×7 tmux sessions**: Persistent operation, reconnect on disconnect, cross-session context recovery
@@ -82,16 +84,45 @@ The Launcher creates an isolated HOME directory under `/tmp` to prevent configur
 Skills, hooks, and rules live in a global library—write once, use everywhere:
 
 ```
-~/.claude/
-├── skills/
-│   ├── tdd/
-│   ├── security-review/
-│   └── backend-patterns/
-├── hooks/
-│   ├── format-on-save/
-│   └── lint-check/
-└── rules/
+~/.themis/
+├── skills/              # Universal skills (Claude Code + Codex compatible)
+├── hooks/               # Hooks for Claude Code and Codex
+├── rules/               # Coding rules
+└── suites.json          # Skill suite definitions
 ```
+
+### Universal Skills
+
+Universal skills work with both Claude Code and Codex. When you create a task, Themis automatically filters skills based on the selected provider:
+
+- **Claude Code skills**: Stored in `~/.claude/skills/`
+- **Codex skills**: Stored in `~/.codex/skills/`
+- **Universal skills**: Stored in `~/.themis/skills/` and work with both providers
+
+### Skill Suites
+
+Skill Suites let you bundle a curated set of skills for quick task setup:
+
+```
+~/.themis/suites.json
+{
+  "suites": [{
+    "id": "web-fullstack",
+    "name": "Web Full-Stack",
+    "skills": [
+      { "id": "react-patterns", "provider": "universal" },
+      { "id": "tdd", "provider": "claude" }
+    ]
+  }]
+}
+```
+
+When creating a task, you can:
+1. **Use a Suite**: Select a pre-defined skill bundle
+2. **No Suite**: Start with default settings
+3. **Add skills later**: Link individual skills from the global library
+
+Suite skills are filtered by provider—only skills matching the task's provider (or universal skills) are applied.
 
 ### Supervisor Autonomous Loop (In Development)
 
@@ -202,6 +233,26 @@ themis hook unlink <id> [task-id]         # Unlink hook
 
 **Hook Types**: `PreToolUse`, `PostToolUse`, `Stop`
 
+### Suite Management
+
+```bash
+themis suite list                # List all skill suites
+themis suite add <name>          # Create a new suite
+themis suite delete <id>         # Delete a suite
+themis suite apply <id> [task]   # Apply suite to a task
+```
+
+**Note**: Suites are applied at task creation time for new tasks, or via the TUI for existing tasks.
+
+### Library Management
+
+```bash
+themis library list              # List universal skills
+themis library add <path>        # Add a skill to universal library
+themis library remove <id>       # Remove a skill
+themis library promote <id>      # Promote Claude Code skill to universal
+```
+
 ---
 
 ## Example Workflow
@@ -258,7 +309,8 @@ themis activate task-001
 |-----------|--------|----------------|
 | `cli/` | ✅ Done | INK TUI and command interface |
 | `task/` | ✅ Done | Task store and metadata |
-| `global-library/` | ✅ Done | Global skills/hooks/rules |
+| `suite/` | ✅ Done | Skill suite CRUD and application |
+| `global-library/` | ✅ Done | Global skills/hooks/rules with universal support |
 | `openspec/` | 🔨 WIP | OpenSpec proposal parsing |
 | `supervisor/` | 📋 Planned | Autonomous monitoring loop |
 
@@ -282,20 +334,22 @@ themis activate task-001
 
 ### Implemented
 
-- [x] Per-task `.claude/` isolation
+- [x] Per-task `.claude/`/`.codex/` isolation
 - [x] Global Skills/Hooks/Rules library
+- [x] Universal skills (cross-provider)
+- [x] Skill Suites
+- [x] Provider selection (Claude Code / Codex)
 - [x] Basic CLI (TUI + command-line)
 
 ### In Development
 
+- [ ] Deep OpenSpec integration
+- [ ] Hooks in Skill Suites
 - [ ] Automatic task parsing
 - [ ] Skills/Hooks categorized loading
-- [ ] Task flow optimization (state management, checkpoint resume)
 
 ### Planned
 
-- [ ] Deep OpenSpec integration
-- [ ] Codex CLI support
 - [ ] Multi-CLI collaboration
 - [ ] Full Supervisor
 - [ ] 24×7 tmux sessions
