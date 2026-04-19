@@ -30,6 +30,7 @@ export const TaskSchema = z.object({
   skills: z.array(TaskSkillSchema).default([]),
   hooks: TaskHooksSchema.default({}),
   provider: TaskProviderSchema.default('claude'),
+  suite_id: z.string().optional(),  // Which suite was used to create this task
 });
 export type Task = z.infer<typeof TaskSchema>;
 

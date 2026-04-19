@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box, Text } from 'ink';
 
 export interface SelectableItem {
@@ -34,12 +34,29 @@ export function ListBox({
 }: ListBoxProps) {
   const [selectedIndex, setSelectedIndex] = useState(initialIndex);
   const [keyHandler, setKeyHandler] = useState<((key: string) => void) | null>(null);
+  const initialIndexRef = useRef(initialIndex);
+  // Keep refs to latest values to avoid stale closures
+  const itemsRef = useRef(items);
+  const selectedIndexRef = useRef(selectedIndex);
+
+  // Keep refs updated
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
 
   useEffect(() => {
-    setSelectedIndex(initialIndex);
-  }, [items, initialIndex]);
+    selectedIndexRef.current = selectedIndex;
+  }, [selectedIndex]);
 
-  // Set up key listener similar to menu.tsx
+  // Only reset when initialIndex changes externally (like pagination)
+  useEffect(() => {
+    if (initialIndex !== initialIndexRef.current) {
+      setSelectedIndex(initialIndex);
+      initialIndexRef.current = initialIndex;
+    }
+  }, [initialIndex]);
+
+  // Set up key listener
   useEffect(() => {
     const isTTY = process.stdin.isTTY;
 
@@ -50,6 +67,8 @@ export function ListBox({
 
     const handler = (s: string | Buffer) => {
       const data = typeof s === 'string' ? s : s.toString();
+      const currentItems = itemsRef.current;
+      const currentIndex = selectedIndexRef.current;
 
       // Ctrl+C
       if (s === '\u0003') {
@@ -70,7 +89,7 @@ export function ListBox({
 
       // Arrow Down or j
       if (data === '\u001b[B' || data === 'j') {
-        setSelectedIndex((prev) => Math.min(items.length - 1, prev + 1));
+        setSelectedIndex((prev) => Math.min(currentItems.length - 1, prev + 1));
         return;
       }
 
@@ -88,19 +107,28 @@ export function ListBox({
 
       // Space - toggle selection
       if (data === ' ') {
-        if (multiSelect && items[selectedIndex] && onToggleSelect) {
-          onToggleSelect(items[selectedIndex].id);
-          setSelectedIndex((prev) => Math.min(items.length - 1, prev + 1));
+        if (multiSelect && currentItems[currentIndex] && onToggleSelect) {
+          onToggleSelect(currentItems[currentIndex].id);
+          setSelectedIndex((prev) => Math.min(currentItems.length - 1, prev + 1));
         }
         return;
       }
 
-      // Enter - select (don't trim!)
+      // Enter - confirm and go to next step, or toggle if no onConfirm
       if (data === '\r' || data === '\n') {
-        if (multiSelect && selectedIds.length > 0 && onConfirm) {
-          onConfirm();
-        } else if (items[selectedIndex]) {
-          items[selectedIndex].onSelect();
+        if (multiSelect && onConfirm) {
+          // Enter confirms and goes to next step
+          if (selectedIds.length > 0) {
+            onConfirm();
+          }
+        } else if (currentItems[currentIndex]) {
+          if (multiSelect && onToggleSelect) {
+            // No onConfirm, so Enter toggles selection
+            onToggleSelect(currentItems[currentIndex].id);
+            setSelectedIndex((prev) => Math.min(currentItems.length - 1, prev + 1));
+          } else {
+            currentItems[currentIndex].onSelect();
+          }
         }
         return;
       }
@@ -124,7 +152,7 @@ export function ListBox({
         // Ignore cleanup errors
       }
     };
-  }, [items, selectedIndex, onBack, onNextPage, onPrevPage, multiSelect, onToggleSelect]);
+  }, [onBack, onNextPage, onPrevPage, multiSelect, onToggleSelect]);
 
   if (items.length === 0) {
     return (
