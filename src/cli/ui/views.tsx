@@ -1525,24 +1525,23 @@ function SuiteNameInputView({
   onCancel: () => void;
 }) {
   const [name, setName] = useState('');
+  const nameRef = useRef('');
 
   useEffect(() => {
     const handleData = (s: string | Buffer) => {
       const input = s.toString();
       if (input === '\r' || input === '\n') {
-        if (name.trim()) {
-          onSubmit(name.trim());
+        if (nameRef.current.trim()) {
+          onSubmit(nameRef.current.trim());
         }
       } else if (input === '\x1b') {
-        // Escape
         onCancel();
       } else if (input === '\x7f' || input === '\x08') {
-        // Backspace
-        setName((prev) => prev.slice(0, -1));
-      } else if (input === '\t') {
-        // Tab - skip
+        nameRef.current = nameRef.current.slice(0, -1);
+        setName(nameRef.current);
       } else if (input.charCodeAt(0) >= 32) {
-        setName((prev) => prev + input);
+        nameRef.current += input;
+        setName(nameRef.current);
       }
     };
 
@@ -1554,7 +1553,7 @@ function SuiteNameInputView({
       process.stdin.pause!();
       process.stdin.setRawMode!(false);
     };
-  }, [name, onSubmit, onCancel]);
+  }, [onSubmit, onCancel]);
 
   return (
     <Box key="suite-create-name" flexDirection="column" flexGrow={1}>
@@ -1590,6 +1589,7 @@ function TaskCreateView({
   onCancel: () => void;
 }) {
   const [name, setName] = useState('');
+  const nameRef = useRef('');
 
   useEffect(() => {
     const handleData = (s: string | Buffer) => {
@@ -1601,13 +1601,15 @@ function TaskCreateView({
       if (data === '\u001b' || data === 'q' || data === 'Q') {
         onCancel();
       } else if (data === '\r' || data === '\n') {
-        if (name.trim()) {
-          onSubmit(name.trim());
+        if (nameRef.current.trim()) {
+          onSubmit(nameRef.current.trim());
         }
       } else if (data === '\b' || data === '\u007f') {
-        setName((n) => n.slice(0, -1));
+        nameRef.current = nameRef.current.slice(0, -1);
+        setName(nameRef.current);
       } else if (data.length === 1 && !data.match(/\s/)) {
-        setName((n) => n + data);
+        nameRef.current += data;
+        setName(nameRef.current);
       }
     };
 
@@ -1627,7 +1629,7 @@ function TaskCreateView({
         // Ignore
       }
     };
-  }, [name, onSubmit, onCancel]);
+  }, [onSubmit, onCancel]);
 
   return (
     <Box flexDirection="column" flexGrow={1}>
