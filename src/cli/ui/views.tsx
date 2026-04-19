@@ -43,7 +43,9 @@ type View =
   | 'hook-select-type'
   | 'suites'
   | 'suite-detail'
-  | 'suite-create'
+  | 'suite-create-name'
+  | 'suite-create-skills'
+  | 'suite-create-confirm'
   | 'sessions'
   | 'supervisor'
   | 'supervisor-reviews'
@@ -451,7 +453,8 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
               onSelect: () => {
                 setSuiteDraftName('');
                 setSuiteDraftSkills([]);
-                setView('suite-create');
+                setSuiteDraftSkillPage(1);
+                setView('suite-create-name');
               },
             },
             ...suites.map((suite) => ({
@@ -474,106 +477,129 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
     );
   }
 
-  // Suite Create
-  if (view === 'suite-create') {
+  // Suite Create - Step 1: Enter Name
+  if (view === 'suite-create-name') {
+    return (
+      <SuiteNameInputView
+        onSubmit={(name) => {
+          setSuiteDraftName(name);
+          setSuiteDraftSkillPage(1);
+          setView('suite-create-skills');
+        }}
+        onCancel={() => setView('suites')}
+      />
+    );
+  }
+
+  // Suite Create - Step 2: Select Skills
+  if (view === 'suite-create-skills') {
     const pageSize = 8;
     const result = globalLibrary.listSkillsByCategory('all', {
       page: suiteDraftSkillPage,
       pageSize,
     });
-    const canSave = suiteDraftName.length > 0 && suiteDraftSkills.length > 0;
 
     return (
-      <Box key="suite-create" flexDirection="column" flexGrow={1}>
+      <Box key="suite-create-skills" flexDirection="column" flexGrow={1}>
         <Box borderStyle="bold" padding={1} marginBottom={1}>
-          <Text bold>CREATE SUITE</Text>
+          <Text bold>CREATE SUITE - SELECT SKILLS</Text>
         </Box>
 
         <Box paddingX={1} flexDirection="column">
           <Text>
-            Suite Name:{' '}
-            <Text color="cyan">{suiteDraftName || '(not set)'}</Text>
+            Suite Name: <Text color="cyan">{suiteDraftName}</Text>
           </Text>
           <Text dimColor>
-            Selected skills: {suiteDraftSkills.length} (use [space] to toggle)
+            Selected: {suiteDraftSkills.length} skills | Page {suiteDraftSkillPage}/{result.totalPages}
           </Text>
-          <Text dimColor>
-            Page {suiteDraftSkillPage}/{result.totalPages} - use [←/→] to page
-          </Text>
+          <Text dimColor>Press [Space] to toggle, [←/→] to page, [Enter] to continue</Text>
         </Box>
 
         <ListBox
-          key={`suite-create-${refreshKey}-${suiteDraftSkillPage}`}
-          items={[
-            {
-              id: 'name',
-              label: suiteDraftName || 'Enter Suite Name',
-              description: 'Click to set suite name',
-              onSelect: () => {},
-            },
-            {
-              id: 'divider-name',
-              label: '─── Skills ───',
-              description: '',
-              onSelect: () => {},
-            },
-            ...result.skills.map((skill) => ({
-              id: skill.id,
-              label: skill.name,
-              description: `[${skill.provider}] ${skill.description?.substring(0, 40) || ''}`.trim(),
-              onSelect: () => {
-                // Single click navigates, multi-select handled by space
-              },
-            })),
-            {
-              id: 'divider-actions',
-              label: '─── Actions ───',
-              description: '',
-              onSelect: () => {},
-            },
-            {
-              id: 'save',
-              label: 'Save Suite',
-              description: canSave
-                ? `Save "${suiteDraftName}" with ${suiteDraftSkills.length} skills`
-                : 'Set name and select skills first',
-              onSelect: () => {
-                if (canSave) {
-                  const skills = suiteDraftSkills.map((id) => {
-                    const skill = globalLibrary.listSkills().find((s) => s.id === id);
-                    return { id, provider: skill?.provider || 'universal' as const };
-                  });
-                  suiteStore.createSuite({
-                    name: suiteDraftName,
-                    description: '',
-                    skills,
-                  });
-                  setSuiteDraftName('');
-                  setSuiteDraftSkills([]);
-                  setSuiteDraftSkillPage(1);
-                  refresh();
-                  setView('suites');
-                }
-              },
-            },
-          ]}
+          key={`suite-create-skills-${refreshKey}-${suiteDraftSkillPage}`}
+          items={result.skills.map((skill) => ({
+            id: skill.id,
+            label: skill.name,
+            description: `[${skill.provider}] ${skill.description?.substring(0, 40) || ''}`.trim(),
+            onSelect: () => {},
+          }))}
           multiSelect={true}
           selectedIds={suiteDraftSkills}
           onToggleSelect={(id) => {
-            if (id === 'name' || id.startsWith('divider')) return;
             setSuiteDraftSkills((prev) =>
               prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
             );
           }}
-          onBack={() => {
-            setSuiteDraftSkillPage(1);
-            setView('suites');
-          }}
+          onConfirm={() => setView('suite-create-confirm')}
+          onBack={() => setView('suite-create-name')}
         />
 
         <Box marginTop={1} flexDirection="column">
-          <Text dimColor>[Space] Toggle skill selection | [←/→] Page | [Esc] Cancel</Text>
-          <Text dimColor>[Esc] Cancel and go back</Text>
+          <Text dimColor>[Space] Toggle | [←/→] Page | [Enter] Next | [Esc] Back</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Suite Create - Step 3: Confirm
+  if (view === 'suite-create-confirm') {
+    const allSkills = globalLibrary.listSkills();
+    const selectedSkillDetails = suiteDraftSkills
+      .map((id) => allSkills.find((s) => s.id === id))
+      .filter(Boolean);
+
+    return (
+      <Box key="suite-create-confirm" flexDirection="column" flexGrow={1}>
+        <Box borderStyle="bold" padding={1} marginBottom={1}>
+          <Text bold>CREATE SUITE - CONFIRM</Text>
+        </Box>
+
+        <Box paddingX={1} flexDirection="column">
+          <Text>Suite Name: <Text color="cyan">{suiteDraftName}</Text></Text>
+          <Text>Skills ({suiteDraftSkills.length}):</Text>
+          {selectedSkillDetails.map((skill) => (
+            <Text key={skill!.id} dimColor>
+              • [{skill!.provider}] {skill!.name}
+            </Text>
+          ))}
+        </Box>
+
+        <ListBox
+          key={`suite-create-confirm-${refreshKey}`}
+          items={[
+            {
+              id: 'save',
+              label: 'Save Suite',
+              description: `Create "${suiteDraftName}" with ${suiteDraftSkills.length} skills`,
+              onSelect: () => {
+                const skills = suiteDraftSkills.map((id) => {
+                  const skill = allSkills.find((s) => s.id === id);
+                  return { id, provider: skill?.provider || 'universal' as const };
+                });
+                suiteStore.createSuite({
+                  name: suiteDraftName,
+                  description: '',
+                  skills,
+                });
+                setSuiteDraftName('');
+                setSuiteDraftSkills([]);
+                setSuiteDraftSkillPage(1);
+                refresh();
+                setView('suites');
+              },
+            },
+            {
+              id: 'back',
+              label: 'Back to Skills',
+              description: 'Modify skill selection',
+              onSelect: () => setView('suite-create-skills'),
+            },
+          ]}
+          onBack={() => setView('suite-create-skills')}
+        />
+
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor>[Enter] Save | [Esc] Back</Text>
         </Box>
       </Box>
     );
@@ -1485,6 +1511,71 @@ function ConfirmView({
 
       <Box marginTop={1} paddingX={1}>
         <Text dimColor>[↑↓] Navigate  [Enter] Select  [Esc] Cancel</Text>
+      </Box>
+    </Box>
+  );
+}
+
+// Suite Name Input Component
+function SuiteNameInputView({
+  onSubmit,
+  onCancel,
+}: {
+  onSubmit: (name: string) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState('');
+
+  useEffect(() => {
+    const handleData = (s: string | Buffer) => {
+      const input = s.toString();
+      if (input === '\r' || input === '\n') {
+        if (name.trim()) {
+          onSubmit(name.trim());
+        }
+      } else if (input === '\x1b') {
+        // Escape
+        onCancel();
+      } else if (input === '\x7f' || input === '\x08') {
+        // Backspace
+        setName((prev) => prev.slice(0, -1));
+      } else if (input === '\t') {
+        // Tab - skip
+      } else if (input.charCodeAt(0) >= 32) {
+        setName((prev) => prev + input);
+      }
+    };
+
+    process.stdin.setRawMode!(true);
+    process.stdin.resume!();
+    process.stdin.on('data', handleData);
+
+    return () => {
+      process.stdin.pause!();
+      process.stdin.setRawMode!(false);
+    };
+  }, [name, onSubmit, onCancel]);
+
+  return (
+    <Box key="suite-create-name" flexDirection="column" flexGrow={1}>
+      <Box borderStyle="bold" padding={1} marginBottom={1}>
+        <Text bold>CREATE SUITE - NAME</Text>
+      </Box>
+
+      <Box paddingX={1} flexDirection="column">
+        <Text>Enter suite name:</Text>
+      </Box>
+
+      <Box paddingX={1} marginTop={1}>
+        <Text>
+          <Text color="cyan">&gt; </Text>
+          <Text>{name}</Text>
+          <Text>█</Text>
+        </Text>
+      </Box>
+
+      <Box marginTop={1} paddingX={1}>
+        <Text dimColor>Press [Enter] to continue | [Esc] to cancel</Text>
       </Box>
     </Box>
   );
