@@ -35,19 +35,28 @@ export function ListBox({
   const [selectedIndex, setSelectedIndex] = useState(initialIndex);
   const [keyHandler, setKeyHandler] = useState<((key: string) => void) | null>(null);
   const initialIndexRef = useRef(initialIndex);
+  // Keep refs to latest values to avoid stale closures
+  const itemsRef = useRef(items);
+  const selectedIndexRef = useRef(selectedIndex);
 
-  // Only reset when key changes (indicating different list content, like pagination)
+  // Keep refs updated
   useEffect(() => {
-    if (keyHandler === null) {
-      // First mount - use current initialIndex
-    } else if (initialIndex !== initialIndexRef.current) {
-      // initialIndex changed externally (like pagination) - reset cursor
+    itemsRef.current = items;
+  }, [items]);
+
+  useEffect(() => {
+    selectedIndexRef.current = selectedIndex;
+  }, [selectedIndex]);
+
+  // Only reset when initialIndex changes externally (like pagination)
+  useEffect(() => {
+    if (initialIndex !== initialIndexRef.current) {
       setSelectedIndex(initialIndex);
       initialIndexRef.current = initialIndex;
     }
-  }, [initialIndex, keyHandler]);
+  }, [initialIndex]);
 
-  // Set up key listener similar to menu.tsx
+  // Set up key listener
   useEffect(() => {
     const isTTY = process.stdin.isTTY;
 
@@ -58,6 +67,8 @@ export function ListBox({
 
     const handler = (s: string | Buffer) => {
       const data = typeof s === 'string' ? s : s.toString();
+      const currentItems = itemsRef.current;
+      const currentIndex = selectedIndexRef.current;
 
       // Ctrl+C
       if (s === '\u0003') {
@@ -78,7 +89,7 @@ export function ListBox({
 
       // Arrow Down or j
       if (data === '\u001b[B' || data === 'j') {
-        setSelectedIndex((prev) => Math.min(items.length - 1, prev + 1));
+        setSelectedIndex((prev) => Math.min(currentItems.length - 1, prev + 1));
         return;
       }
 
@@ -96,25 +107,23 @@ export function ListBox({
 
       // Space - toggle selection
       if (data === ' ') {
-        if (multiSelect && items[selectedIndex] && onToggleSelect) {
-          onToggleSelect(items[selectedIndex].id);
-          setSelectedIndex((prev) => Math.min(items.length - 1, prev + 1));
+        if (multiSelect && currentItems[currentIndex] && onToggleSelect) {
+          onToggleSelect(currentItems[currentIndex].id);
+          setSelectedIndex((prev) => Math.min(currentItems.length - 1, prev + 1));
         }
         return;
       }
 
       // Enter - select current item
       if (data === '\r' || data === '\n') {
-        if (items[selectedIndex]) {
+        if (currentItems[currentIndex]) {
           if (multiSelect) {
-            // In multi-select mode, Enter toggles current item selection
             if (onToggleSelect) {
-              onToggleSelect(items[selectedIndex].id);
-              // Move to next item after selection
-              setSelectedIndex((prev) => Math.min(items.length - 1, prev + 1));
+              onToggleSelect(currentItems[currentIndex].id);
+              setSelectedIndex((prev) => Math.min(currentItems.length - 1, prev + 1));
             }
           } else {
-            items[selectedIndex].onSelect();
+            currentItems[currentIndex].onSelect();
           }
         }
         return;
@@ -147,7 +156,7 @@ export function ListBox({
         // Ignore cleanup errors
       }
     };
-  }, [items, onBack, onNextPage, onPrevPage, multiSelect, onToggleSelect]);
+  }, [onBack, onNextPage, onPrevPage, multiSelect, onToggleSelect]);
 
   if (items.length === 0) {
     return (
