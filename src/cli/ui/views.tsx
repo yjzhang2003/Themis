@@ -130,6 +130,7 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
   const [selectedSuiteId, setSelectedSuiteId] = useState<string | null>(null);
   const [suiteDraftName, setSuiteDraftName] = useState('');
   const [suiteDraftSkills, setSuiteDraftSkills] = useState<string[]>([]);
+  const [suiteDraftSkillPage, setSuiteDraftSkillPage] = useState(1);
   const suiteStore = new SuiteStore();
   suiteStore.ensureDirectories();
 
@@ -475,7 +476,11 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
 
   // Suite Create
   if (view === 'suite-create') {
-    const allSkills = globalLibrary.listSkills();
+    const pageSize = 8;
+    const result = globalLibrary.listSkillsByCategory('all', {
+      page: suiteDraftSkillPage,
+      pageSize,
+    });
     const canSave = suiteDraftName.length > 0 && suiteDraftSkills.length > 0;
 
     return (
@@ -492,10 +497,13 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
           <Text dimColor>
             Selected skills: {suiteDraftSkills.length} (use [space] to toggle)
           </Text>
+          <Text dimColor>
+            Page {suiteDraftSkillPage}/{result.totalPages} - use [←/→] to page
+          </Text>
         </Box>
 
         <ListBox
-          key={`suite-create-${refreshKey}`}
+          key={`suite-create-${refreshKey}-${suiteDraftSkillPage}`}
           items={[
             {
               id: 'name',
@@ -509,7 +517,7 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
               description: '',
               onSelect: () => {},
             },
-            ...allSkills.map((skill) => ({
+            ...result.skills.map((skill) => ({
               id: skill.id,
               label: skill.name,
               description: `[${skill.provider}] ${skill.description?.substring(0, 40) || ''}`.trim(),
@@ -532,7 +540,7 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
               onSelect: () => {
                 if (canSave) {
                   const skills = suiteDraftSkills.map((id) => {
-                    const skill = allSkills.find((s) => s.id === id);
+                    const skill = globalLibrary.listSkills().find((s) => s.id === id);
                     return { id, provider: skill?.provider || 'universal' as const };
                   });
                   suiteStore.createSuite({
@@ -542,6 +550,7 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
                   });
                   setSuiteDraftName('');
                   setSuiteDraftSkills([]);
+                  setSuiteDraftSkillPage(1);
                   refresh();
                   setView('suites');
                 }
@@ -556,11 +565,14 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
               prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
             );
           }}
-          onBack={() => setView('suites')}
+          onBack={() => {
+            setSuiteDraftSkillPage(1);
+            setView('suites');
+          }}
         />
 
         <Box marginTop={1} flexDirection="column">
-          <Text dimColor>[Space] Toggle skill selection</Text>
+          <Text dimColor>[Space] Toggle skill selection | [←/→] Page | [Esc] Cancel</Text>
           <Text dimColor>[Esc] Cancel and go back</Text>
         </Box>
       </Box>
