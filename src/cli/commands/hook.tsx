@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Box, Text } from 'ink';
 import { GlobalLibraryStore, GlobalHook } from '../../global-library/store.js';
 import { TaskStore } from '../../task/store.js';
+import type { ParsedArgs } from '../context.js';
+
 
 interface HookCommandProps {
   store: TaskStore | null;
-  args: Record<string, unknown>;
+  args: ParsedArgs;
 }
 
 export function HookAddCommand({ args }: HookCommandProps) {
@@ -103,14 +105,10 @@ export function HookListCommand() {
           {hooks.map((hook) => (
             <Box key={hook.id} marginBottom={1} flexDirection="column">
               <Box>
-                <Text color="cyan" width={20}>
-                  {hook.id}
-                </Text>
+                <Box width={20}><Text color="cyan">{hook.id}</Text></Box>
                 <Text color="yellow">[{hook.type}]</Text>
               </Box>
-              <Text dimColor paddingLeft={2}>
-                {hook.command}
-              </Text>
+              <Box paddingLeft={2}><Text dimColor>{hook.command}</Text></Box>
             </Box>
           ))}
         </Box>
@@ -194,6 +192,7 @@ export function HookLinkCommand({ store, args }: HookCommandProps) {
 }
 
 export function HookUnlinkCommand({ store, args }: HookCommandProps) {
+
   const [result, setResult] = useState<{ success: boolean; error?: string }>({
     success: false,
   });

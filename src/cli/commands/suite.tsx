@@ -3,10 +3,12 @@ import { Box, Text } from 'ink';
 import { SuiteStore } from '../../suite/store.js';
 import { Suite, SuiteSkill } from '../../suite/types.js';
 import { TaskStore } from '../../task/store.js';
+import type { ParsedArgs } from '../context.js';
+
 
 interface SuiteCommandProps {
   store: TaskStore | null;
-  args: Record<string, unknown>;
+  args: ParsedArgs;
 }
 
 export function SuiteListCommand({ args }: SuiteCommandProps) {
@@ -46,9 +48,7 @@ export function SuiteListCommand({ args }: SuiteCommandProps) {
           {output.suites.map((suite) => (
             <Box key={suite.id} marginBottom={1} flexDirection="column">
               <Box>
-                <Text color="cyan" width={20}>
-                  {suite.id}
-                </Text>
+                <Box width={20}><Text color="cyan">{suite.id}</Text></Box>
                 <Text bold>{suite.name}</Text>
               </Box>
               {suite.description && (
@@ -170,6 +170,7 @@ export function SuiteDeleteCommand({ args }: SuiteCommandProps) {
 }
 
 export function SuiteApplyCommand({ store, args }: SuiteCommandProps) {
+
   const [result, setResult] = useState<{ success: boolean; error?: string }>({
     success: false,
   });

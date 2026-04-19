@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Box, Text } from 'ink';
 import { GlobalLibraryStore, GlobalSkill } from '../../global-library/store.js';
 import { TaskStore } from '../../task/store.js';
+import type { ParsedArgs } from '../context.js';
+
 
 interface SkillCommandProps {
   store: TaskStore | null;
-  args: Record<string, unknown>;
+  args: ParsedArgs;
 }
 
 export function SkillAddCommand({ args }: SkillCommandProps) {
@@ -115,9 +117,7 @@ export function SkillListCommand({ args }: SkillCommandProps) {
             <>
               {output.skills.map((skill) => (
                 <Box key={skill.id} marginBottom={1}>
-                  <Text color="cyan" width={25}>
-                    {skill.id}
-                  </Text>
+                  <Box width={25}><Text color="cyan">{skill.id}</Text></Box>
                   <Text>{skill.description || '(no description)'}</Text>
                 </Box>
               ))}
@@ -201,6 +201,7 @@ export function SkillLinkCommand({ store, args }: SkillCommandProps) {
 }
 
 export function SkillUnlinkCommand({ store, args }: SkillCommandProps) {
+
   const [result, setResult] = useState<{ success: boolean; error?: string }>({
     success: false,
   });

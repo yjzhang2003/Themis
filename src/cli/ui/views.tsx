@@ -4,14 +4,10 @@ import { join } from 'path';
 import { exec, execSync } from 'child_process';
 import { TaskStore } from '../../task/store.js';
 import { GlobalLibraryStore } from '../../global-library/index.js';
-import { TaskLauncher } from '../../supervisor/launcher.js';
-import { TaskStatusMonitor } from '../../supervisor/status-monitor.js';
-import { TmuxManager } from '../../supervisor/tmux.js';
-import { SessionMonitor } from '../../supervisor/monitor.js';
-import { SupervisorConfigManager } from '../../supervisor/config.js';
-import { SupervisorLoop } from '../../supervisor/supervisor-loop.js';
-import { getProvider } from '../../supervisor/providers/base.js';
-import type { ProviderType } from '../../supervisor/providers/base.js';
+import { TaskLauncher } from '../../tmux/launcher.js';
+import { TmuxManager } from '../../tmux/tmux.js';
+import { getProvider } from '../../tmux/providers/base.js';
+import type { ProviderType } from '../../tmux/providers/base.js';
 import { SuiteStore } from '../../suite/store.js';
 import { ListBox } from './listbox.js';
 import { useCLI } from '../context.js';
@@ -47,9 +43,6 @@ type View =
   | 'suite-create-skills'
   | 'suite-create-confirm'
   | 'sessions'
-  | 'supervisor'
-  | 'supervisor-reviews'
-  | 'supervisor-review'
   | 'back-confirm';
 
 interface InteractiveAppProps {
@@ -68,10 +61,6 @@ function launchTaskSession(taskName: string, taskPath: string, skills: string[] 
   const globalLib = new GlobalLibraryStore();
   const providerInstance = getProvider(provider);
   const sessionName = providerInstance.sessionName(taskName);
-
-  // Initialize status file
-  const statusMonitor = new TaskStatusMonitor();
-  statusMonitor.initStatus(taskName, taskPath);
 
   // Build launch config
   const launchConfig = {
@@ -122,7 +111,6 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
   const [selectSkillPage, setSelectSkillPage] = useState(1);
   const [selectHookSearch, setSelectHookSearch] = useState('');
   const [selectHookPage, setSelectHookPage] = useState(1);
-  const [supervisorReviewTaskId, setSupervisorReviewTaskId] = useState<string | null>(null);
   const [browseSkillPage, setBrowseSkillPage] = useState(1);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<'claude' | 'codex'>('claude');
@@ -201,12 +189,6 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
               label: 'Sessions',
               description: 'Manage running task sessions',
               onSelect: () => setView('sessions'),
-            },
-            {
-              id: 'supervisor',
-              label: 'Supervisor',
-              description: 'Monitor tasks and review queue',
-              onSelect: () => setView('supervisor'),
             },
           ]}
           onBack={onQuit}
@@ -713,213 +695,6 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
     );
   }
 
-  // Supervisor Main View
-  if (view === 'supervisor') {
-    const tmux = new TmuxManager();
-    const config = new SupervisorConfigManager();
-    const monitor = new SessionMonitor(config.getSessionsDir(), config.getTaskSessionPrefix());
-    const supervisorRunning = tmux.sessionExists('ths-supervisor');
-    const states = monitor.checkAllSessions();
-    const alive = states.filter(s => s.status === 'alive').length;
-    const dead = states.filter(s => s.status === 'dead').length;
-
-    // Check for tasks needing review
-    const statusMonitor = new TaskStatusMonitor();
-    const tasks = store.listTasks();
-    const reviews: string[] = [];
-    for (const task of tasks) {
-      const status = statusMonitor.readStatus(task.path);
-      if (status && status.needs_review) {
-        reviews.push(task.name);
-      }
-    }
-
-    return (
-      <Box key="supervisor" flexDirection="column" flexGrow={1}>
-        <Box borderStyle="bold" padding={1} marginBottom={1}>
-          <Text bold>SUPERVISOR</Text>
-        </Box>
-
-        <Box paddingX={1} flexDirection="column">
-          <Text>Supervisor: <Text color={supervisorRunning ? 'green' : 'red'}>{supervisorRunning ? 'RUNNING' : 'STOPPED'}</Text></Text>
-          <Text>Task Sessions: {states.length} total ({alive} alive, {dead} dead)</Text>
-          <Text>Pending Reviews: <Text color={reviews.length > 0 ? 'yellow' : 'green'}>{reviews.length}</Text></Text>
-        </Box>
-
-        <Box marginTop={1} flexDirection="column">
-          <Text bold>Actions:</Text>
-        </Box>
-
-        <ListBox
-          key={`supervisor-${refreshKey}`}
-          items={[
-            {
-              id: 'start',
-              label: supervisorRunning ? 'Stop Supervisor' : 'Start Supervisor',
-              description: supervisorRunning ? 'Stop the supervisor daemon' : 'Start the supervisor daemon',
-              onSelect: () => {
-                if (supervisorRunning) {
-                  tmux.killSession('ths-supervisor');
-                } else {
-                  // Use the session command to start supervisor
-                  exec(`"${join(process.cwd(), 'dist', 'cli', 'index.js')}" supervisor start`, (err) => {
-                    if (err) console.error('Failed to start supervisor:', err.message);
-                    refresh();
-                  });
-                }
-                refresh();
-              },
-            },
-            {
-              id: 'reviews',
-              label: 'View Reviews',
-              description: `Tasks pending review (${reviews.length})`,
-              onSelect: () => setView('supervisor-reviews'),
-            },
-            {
-              id: 'status',
-              label: 'Task Status',
-              description: 'View all task session statuses',
-              onSelect: () => {
-                const states = monitor.checkAllSessions();
-                let msg = `STATUS     TASK_ID             SESSION\n`;
-                for (const s of states) {
-                  const indicator = s.status === 'alive' ? 'RUNNING' : 'DEAD';
-                  msg += `${indicator.padEnd(8)} ${s.task_id.padEnd(20)} ${s.tmux_session}\n`;
-                }
-                // For now just show in a simple alert
-              },
-            },
-          ]}
-          onBack={goBack}
-        />
-
-        <Box marginTop={1} flexDirection="column">
-          <Text dimColor>[Esc] Back to main menu</Text>
-        </Box>
-      </Box>
-    );
-  }
-
-  // Supervisor Reviews List
-  if (view === 'supervisor-reviews') {
-    const statusMonitor = new TaskStatusMonitor();
-    const tasks = store.listTasks();
-    const reviewTasks: Array<{ taskName: string; reason: string; progress: number; path: string }> = [];
-    for (const task of tasks) {
-      const status = statusMonitor.readStatus(task.path);
-      if (status && status.needs_review) {
-        reviewTasks.push({
-          taskName: task.name,
-          reason: status.review_reason || 'needs_review',
-          progress: status.progress_percent,
-          path: task.path,
-        });
-      }
-    }
-
-    return (
-      <Box key="supervisor-reviews" flexDirection="column" flexGrow={1}>
-        <Box borderStyle="bold" padding={1} marginBottom={1}>
-          <Text bold>REVIEW QUEUE</Text>
-        </Box>
-
-        {reviewTasks.length === 0 ? (
-          <Box paddingX={1}>
-            <Text>No tasks pending review</Text>
-          </Box>
-        ) : (
-          <ListBox
-            key={`supervisor-reviews-${refreshKey}`}
-            items={reviewTasks.map((r) => ({
-              id: r.taskName,
-              label: r.taskName,
-              description: `${r.reason} (${r.progress}%)`,
-              onSelect: () => {
-                setSupervisorReviewTaskId(r.taskName);
-                setView('supervisor-review');
-              },
-            }))}
-            onBack={() => setView('supervisor')}
-          />
-        )}
-
-        <Box marginTop={1} flexDirection="column">
-          <Text dimColor>[Esc] Back to Supervisor</Text>
-        </Box>
-      </Box>
-    );
-  }
-
-  // Supervisor Review Detail
-  if (view === 'supervisor-review' && supervisorReviewTaskId) {
-    const task = store.getTask(supervisorReviewTaskId);
-    if (!task) {
-      setView('supervisor-reviews');
-      return null;
-    }
-
-    const statusMonitor = new TaskStatusMonitor();
-    const status = statusMonitor.readStatus(task.path);
-
-    return (
-      <Box key="supervisor-review" flexDirection="column" flexGrow={1}>
-        <Box borderStyle="bold" padding={1} marginBottom={1}>
-          <Text bold>REVIEW: </Text>
-          <Text>{supervisorReviewTaskId}</Text>
-        </Box>
-
-        <Box paddingX={1} flexDirection="column">
-          <Text>Phase: <Text color="cyan">{status?.phase || 'unknown'}</Text></Text>
-          <Text>Progress: <Text color="cyan">{status?.progress_percent || 0}%</Text></Text>
-          <Text>Reason: <Text color="yellow">{status?.review_reason || 'unknown'}</Text></Text>
-          <Text>Errors: {status?.errors.length || 0}</Text>
-          {status && status.errors.length > 0 && (
-            <Text dimColor>Last error: {status.errors[status.errors.length - 1]?.substring(0, 80)}</Text>
-          )}
-        </Box>
-
-        <Box marginTop={1} flexDirection="column">
-          <Text bold>Actions:</Text>
-        </Box>
-
-        <ListBox
-          key={`supervisor-review-${refreshKey}`}
-          items={[
-            {
-              id: 'approve',
-              label: 'Approve',
-              description: 'Continue the task',
-              onSelect: () => {
-                statusMonitor.clearNeedsReview(task.path);
-                refresh();
-                setSupervisorReviewTaskId(null);
-                setView('supervisor-reviews');
-              },
-            },
-            {
-              id: 'reject',
-              label: 'Reject',
-              description: 'Stop the task',
-              onSelect: () => {
-                const launcher = new TaskLauncher();
-                launcher.stop(supervisorReviewTaskId);
-                refresh();
-                setSupervisorReviewTaskId(null);
-                setView('supervisor-reviews');
-              },
-            },
-          ]}
-          onBack={() => setView('supervisor-reviews')}
-        />
-
-        <Box marginTop={1} flexDirection="column">
-          <Text dimColor>[Esc] Back to reviews</Text>
-        </Box>
-      </Box>
-    );
-  }
-
   // Tasks List
   if (view === 'tasks') {
     const tasks = store.listTasks();
@@ -1260,7 +1035,7 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
         <Box borderStyle="bold" padding={1} marginBottom={1}>
           <Text bold>ADD SKILL TO TASK</Text>
         </Box>
-        <Text dimColor paddingX={1}>Select a category:</Text>
+        <Box paddingX={1}><Text dimColor>Select a category:</Text></Box>
 
         <ListBox
           key={`skill-select-${refreshKey}`}
@@ -1315,11 +1090,11 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
           <Text dimColor> - {skillCategory}</Text>
           {selectSkillSearch && <Text dimColor> (search: "{selectSkillSearch}")</Text>}
         </Box>
-        <Text dimColor paddingX={1}>
+        <Box paddingX={1}><Text dimColor>
           {selectedSkillIds.length > 0
             ? `${selectedSkillIds.length} selected - press [Enter] to continue`
             : 'Press [Space] to select, [←/→] to page'}
-        </Text>
+        </Text></Box>
 
         <ListBox
           key={`skill-select-category-${refreshKey}-${selectSkillPage}`}
@@ -1373,7 +1148,7 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
         <Box borderStyle="bold" padding={1} marginBottom={1}>
           <Text bold>ADD HOOK TO TASK</Text>
         </Box>
-        <Text dimColor paddingX={1}>Select a hook type:</Text>
+        <Box paddingX={1}><Text dimColor>Select a hook type:</Text></Box>
 
         <ListBox
           key={`hook-select-${refreshKey}`}
@@ -1435,11 +1210,11 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
           <Text dimColor> - {selectedHookType}</Text>
           {selectHookSearch && <Text dimColor> (search: "{selectHookSearch}")</Text>}
         </Box>
-        <Text dimColor paddingX={1}>
+        <Box paddingX={1}><Text dimColor>
           {selectedHookIds.length > 0
             ? `${selectedHookIds.length} selected - press [Enter] to add`
             : 'Press [Space] to select, [←/→] to page'}
-        </Text>
+        </Text></Box>
 
         <ListBox
           key={`hook-select-type-${refreshKey}`}

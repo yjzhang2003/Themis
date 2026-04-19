@@ -15,10 +15,12 @@ export interface GlobalSkill {
   updated_at: string;
 }
 
+export type HookType = 'PreToolUse' | 'PostToolUse' | 'Stop' | 'SessionStart' | 'SessionEnd' | 'PreCompact';
+
 export interface GlobalHook {
   id: string;
   name: string;
-  type: 'PreToolUse' | 'PostToolUse' | 'Stop';
+  type: HookType;
   command: string;
   matcher?: string;
   description?: string;

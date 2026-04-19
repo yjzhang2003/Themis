@@ -1,6 +1,4 @@
 import type { LaunchConfig } from '../types.js';
-import { ClaudeCodeProvider } from './claude-code.js';
-import { CodexProvider } from './codex.js';
 
 export type ProviderType = 'claude' | 'codex';
 
@@ -42,3 +40,6 @@ export function getProvider(type: ProviderType): AICliProvider {
       return codexProvider;
   }
 }
+
+import { ClaudeCodeProvider } from './claude-code.js';
+import { CodexProvider } from './codex.js';

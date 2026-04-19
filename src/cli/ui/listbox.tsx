@@ -165,7 +165,7 @@ export function ListBox({
   return (
     <Box flexDirection="column">
       {items.map((item, index) => {
-        const isSelected = index === selectedIndex && keyHandler;
+        const isSelected = !!(index === selectedIndex && keyHandler);
         const isMultiSelected = selectedIds.includes(item.id);
         const maxDescWidth = 60;
         const descText = item.description?.split('\n')[0] || '';
@@ -176,10 +176,6 @@ export function ListBox({
           <Box
             key={item.id}
             paddingY={0}
-            onSelect={() => {
-              setSelectedIndex(index);
-              setTimeout(() => item.onSelect(), 50);
-            }}
           >
             <Box width={3}>
               <Text color={isSelected ? 'cyan' : undefined}>

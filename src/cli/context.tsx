@@ -2,10 +2,15 @@ import React, { createContext, useContext, useMemo, ReactNode } from 'react';
 import { existsSync } from 'fs';
 import { TaskStore } from '../task/store.js';
 
+export interface ParsedArgs {
+  _: string[];
+  [key: string]: unknown;
+}
+
 interface CLIContextType {
   store: TaskStore | null;
   workspaceRoot: string;
-  args: Record<string, unknown>;
+  args: ParsedArgs;
   command: string;
   subcommand: string;
   showHelp: () => boolean;
@@ -14,7 +19,7 @@ interface CLIContextType {
 const CLIContext = createContext<CLIContextType>({
   store: null,
   workspaceRoot: process.cwd(),
-  args: {},
+  args: { _: [] } as ParsedArgs,
   command: '',
   subcommand: '',
   showHelp: () => false,
@@ -31,8 +36,8 @@ interface CLIProviderProps {
 export function CLIProvider({ children }: CLIProviderProps) {
   // Parse args synchronously
   const parsedArgs = useMemo(() => parseArgs(), []);
-  const cmd = (parsedArgs._[0] as string) || '';
-  const sub = (parsedArgs._[1] as string) || '';
+  const cmd = parsedArgs._[0] || '';
+  const sub = parsedArgs._[1] || '';
 
   // Find workspace root synchronously - only check current directory
   const workspaceRoot = useMemo(() => {
@@ -53,15 +58,15 @@ export function CLIProvider({ children }: CLIProviderProps) {
   const help = parsedArgs.h || parsedArgs.help || false;
 
   const context = useMemo(
-    () => ({ store, workspaceRoot, args: parsedArgs, command: cmd, subcommand: sub, showHelp: () => help }),
+    () => ({ store, workspaceRoot, args: parsedArgs, command: cmd, subcommand: sub, showHelp: () => !!help }),
     [store, workspaceRoot, parsedArgs, cmd, sub, help]
   );
 
   return <CLIContext.Provider value={context}>{children}</CLIContext.Provider>;
 }
 
-function parseArgs(): Record<string, unknown> {
-  const args: Record<string, unknown> = { _: [] };
+function parseArgs(): ParsedArgs {
+  const args: ParsedArgs = { _: [] };
 
   const argv = process.argv.slice(2);
   for (let i = 0; i < argv.length; i++) {
@@ -83,7 +88,7 @@ function parseArgs(): Record<string, unknown> {
       const key = arg.slice(1);
       args[key] = true;
     } else {
-      (args._ as unknown[]).push(arg);
+      args._.push(arg);
     }
   }
 

@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Text } from 'ink';
 import { TaskStore } from '../../task/store.js';
+import { Task } from '../../task/types.js';
+import { TaskHooks } from '../../task/types.js';
 import { STATUS_COLORS } from '../constants.js';
+import type { ParsedArgs } from '../context.js';
+
 
 interface StatusCommandProps {
   store: TaskStore | null;
-  args: Record<string, unknown>;
+  args: ParsedArgs;
 }
 
 export function StatusCommand({ store, args }: StatusCommandProps) {
+
   const [task, setTask] = useState<Task | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,22 +69,22 @@ export function StatusCommand({ store, args }: StatusCommandProps) {
 
       <Box flexDirection="column" paddingLeft={2}>
         <Box>
-          <Text dimColor width={12}>Name:</Text>
+          <Box width={12}><Text dimColor>Name:</Text></Box>
           <Text>{task.name}</Text>
         </Box>
 
         <Box>
-          <Text dimColor width={12}>Status:</Text>
+          <Box width={12}><Text dimColor>Status:</Text></Box>
           <Text color={STATUS_COLORS[task.status]}>{task.status}</Text>
         </Box>
 
         <Box>
-          <Text dimColor width={12}>Created:</Text>
+          <Box width={12}><Text dimColor>Created:</Text></Box>
           <Text>{new Date(task.created_at).toLocaleString()}</Text>
         </Box>
 
         <Box>
-          <Text dimColor width={12}>Updated:</Text>
+          <Box width={12}><Text dimColor>Updated:</Text></Box>
           <Text>{new Date(task.updated_at).toLocaleString()}</Text>
         </Box>
 
@@ -92,7 +97,7 @@ export function StatusCommand({ store, args }: StatusCommandProps) {
 
         {task.openspec?.change && (
           <Box>
-            <Text dimColor width={12}>OpenSpec:</Text>
+            <Box width={12}><Text dimColor>OpenSpec:</Text></Box>
             <Text>{task.openspec.change}</Text>
           </Box>
         )}
@@ -101,9 +106,9 @@ export function StatusCommand({ store, args }: StatusCommandProps) {
           <Box flexDirection="column" marginTop={1}>
             <Text dimColor>Skills:</Text>
             {task.skills.map((s, i) => (
-              <Text key={i} paddingLeft={2}>
-                - {s.skill}@{s.version}
-              </Text>
+              <Box key={i} paddingLeft={2}>
+                <Text>- {s.skill}@{s.version}</Text>
+              </Box>
             ))}
           </Box>
         )}
@@ -111,11 +116,11 @@ export function StatusCommand({ store, args }: StatusCommandProps) {
         {task.hooks && Object.keys(task.hooks).length > 0 && (
           <Box flexDirection="column" marginTop={1}>
             <Text dimColor>Hooks:</Text>
-            {Object.entries(task.hooks).map(([type, hooks]) =>
-              hooks.map((h, i) => (
-                <Text key={`${type}-${i}`} paddingLeft={2}>
-                  - {type}: {h}
-                </Text>
+            {Object.entries(task.hooks as TaskHooks).map(([type, hookIds]) =>
+              (hookIds as string[]).map((h: string, i: number) => (
+                <Box key={`${type}-${i}`} paddingLeft={2}>
+                  <Text>- {type}: {h}</Text>
+                </Box>
               ))
             )}
           </Box>

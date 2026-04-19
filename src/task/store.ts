@@ -88,6 +88,15 @@ export class TaskStore {
     }
     return { ...task };
   }
+  getActiveTask(): Task | null {
+    const active = this.index.tasks.find((t) => t.status === 'in_progress');
+    if (!active) return null;
+    if (!existsSync(getTaskMarkerPath(active.path))) {
+      this.deleteTask(active.name);
+      return null;
+    }
+    return { ...active };
+  }
 
   createTask(name: string, taskPath?: string, description?: string, provider: 'claude' | 'codex' = 'claude', suiteId?: string): Task {
     const now = new Date().toISOString();
@@ -95,8 +104,10 @@ export class TaskStore {
 
     const task: Task = {
       name,
+      id: name,
       path: absPath,
       created_at: now,
+      updated_at: now,
       status: 'paused',
       description,
       skills: [],
@@ -154,6 +165,7 @@ export class TaskStore {
       ...task,
       ...updates,
       name: task.name, // Don't allow renaming
+      updated_at: new Date().toISOString(),
     };
 
     this.index.tasks[idx] = updated;

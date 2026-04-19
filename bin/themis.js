@@ -5,4 +5,4 @@ ORIGINAL_PWD="$(pwd)"
 SELF=$(readlink -f "$0")
 PKGDIR=$(dirname "$SELF")
 ROOTDIR=$(cd "$PKGDIR/.." && pwd)
-cd "$ROOTDIR" && ORIGINAL_PWD="$ORIGINAL_PWD" node --import tsx src/cli/index.tsx "$@"
+cd "$ROOTDIR" && ORIGINAL_PWD="$ORIGINAL_PWD" node dist/cli/index.js "$@"

@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Text } from 'ink';
 import { GlobalLibraryStore, GlobalSkill } from '../../global-library/store.js';
+import type { ParsedArgs } from '../context.js';
+
 
 interface LibraryCommandProps {
-  args: Record<string, unknown>;
+  args: ParsedArgs;
 }
 
 export function LibraryListCommand({ args }: LibraryCommandProps) {
@@ -85,9 +87,7 @@ export function LibraryListCommand({ args }: LibraryCommandProps) {
           {output.skills.map((skill) => (
             <Box key={skill.id} marginBottom={1} flexDirection="column">
               <Box>
-                <Text color="cyan" width={25}>
-                  {skill.id}
-                </Text>
+                <Box width={25}><Text color="cyan">{skill.id}</Text></Box>
                 <Text>
                   {skill.name}
                   <Text dimColor> ({skill.provider})</Text>
@@ -197,6 +197,7 @@ export function LibraryRemoveCommand({ args }: LibraryCommandProps) {
 }
 
 export function LibraryPromoteCommand({ args }: LibraryCommandProps) {
+
   const [result, setResult] = useState<{ success: boolean; skill?: GlobalSkill; error?: string }>({
     success: false,
   });

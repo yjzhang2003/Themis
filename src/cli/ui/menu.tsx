@@ -103,7 +103,7 @@ export function Menu({ title, items, onSelect, onBack, onQuit }: MenuProps) {
       </Box>
       <Box flexDirection="column">
         {items.map((item, index) => {
-          const isSelected = index === selectedIndex && keyHandler;
+          const isSelected = !!(index === selectedIndex && keyHandler);
 
           return (
             <Box key={item.id} flexDirection="column">

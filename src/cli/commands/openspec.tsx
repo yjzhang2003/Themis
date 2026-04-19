@@ -3,13 +3,16 @@ import { Box, Text } from 'ink';
 import { join } from 'path';
 import { scanOpenSpecProject, OpenSpecProject } from '../../openspec/scanner.js';
 import { TaskStore } from '../../task/store.js';
+import type { ParsedArgs } from '../context.js';
+
 
 interface OpenSpecCommandProps {
   store: TaskStore | null;
-  args: Record<string, unknown>;
+  args: ParsedArgs;
 }
 
 export function OpenSpecCommand({ store, args }: OpenSpecCommandProps) {
+
   const [output, setOutput] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -117,7 +120,7 @@ export function OpenSpecCommand({ store, args }: OpenSpecCommandProps) {
 
   return (
     <Box flexDirection="column" padding={1}>
-      <Text white>{output}</Text>
+      <Text>{output}</Text>
     </Box>
   );
 }

@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Text } from 'ink';
 import { TaskStore } from '../../task/store.js';
+import type { ParsedArgs } from '../context.js';
+
 
 interface ActivateCommandProps {
   store: TaskStore | null;
-  args: Record<string, unknown>;
+  args: ParsedArgs;
 }
 
 export function ActivateCommand({ store, args }: ActivateCommandProps) {
+
   const [result, setResult] = useState<{ success: boolean; error?: string; provider?: string }>({
     success: false,
   });
@@ -65,7 +68,7 @@ export function ActivateCommand({ store, args }: ActivateCommandProps) {
         <Text dimColor>Use tmux to attach to the task session:</Text>
       </Box>
       <Box flexDirection="column" paddingLeft={2}>
-        <Text dimColor>tmux attach-session -t {sessionPrefix}-{args._[1]}</Text>
+        <Text dimColor>tmux attach-session -t {sessionPrefix}-{(args._[1] as string | undefined) ?? ''}</Text>
       </Box>
     </Box>
   );

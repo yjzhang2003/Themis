@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Text } from 'ink';
 import { TaskStore } from '../../task/store.js';
+import type { ParsedArgs } from '../context.js';
+
 
 interface NewCommandProps {
   store: TaskStore | null;
-  args: Record<string, unknown>;
+  args: ParsedArgs;
 }
 
 export function NewCommand({ store, args }: NewCommandProps) {
+
   const [task, setTask] = useState<{ id: string; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 

@@ -1,13 +1,16 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import { execSync } from 'child_process';
-import { TmuxManager } from '../../supervisor/tmux.js';
+import { TmuxManager } from '../../tmux/tmux.js';
+import type { ParsedArgs } from '../context.js';
+
 
 interface TakeoverCommandProps {
-  args: Record<string, unknown>;
+  args: ParsedArgs;
 }
 
 export function TakeoverCommand({ args }: TakeoverCommandProps) {
+
   const cmdArgs = args._ as string[] || [];
   const taskId = cmdArgs[1] as string | undefined;
 

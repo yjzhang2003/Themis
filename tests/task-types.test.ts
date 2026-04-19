@@ -63,13 +63,17 @@ describe('TaskHooksSchema', () => {
 describe('TaskSchema', () => {
   it('parses minimal valid task', () => {
     const task = TaskSchema.parse({
-      name: 'Test Task',
+      id: 'test-task',
+      name: 'test-task',
       path: '/home/user/project',
       created_at: '2026-04-16T10:00:00Z',
+      updated_at: '2026-04-16T10:00:00Z',
     });
-    expect(task.name).toBe('Test Task');
+    expect(task.name).toBe('test-task');
+    expect(task.id).toBe('test-task');
     expect(task.path).toBe('/home/user/project');
     expect(task.created_at).toBe('2026-04-16T10:00:00Z');
+    expect(task.updated_at).toBe('2026-04-16T10:00:00Z');
     expect(task.status).toBe('paused');
     expect(task.skills).toEqual([]);
     expect(task.hooks).toEqual({});
@@ -77,16 +81,19 @@ describe('TaskSchema', () => {
 
   it('parses task with all fields', () => {
     const task = TaskSchema.parse({
-      name: 'Full Task',
+      id: 'full-task',
+      name: 'full-task',
       path: '/home/user/project',
       description: 'A task with everything',
       status: 'in_progress',
       created_at: '2026-04-16T10:00:00Z',
+      updated_at: '2026-04-16T10:00:00Z',
       skills: [{ skill: 'tdd', version: '1.0', enabled: true }],
       hooks: { PostToolUse: ['lint'] },
     });
 
-    expect(task.name).toBe('Full Task');
+    expect(task.name).toBe('full-task');
+    expect(task.id).toBe('full-task');
     expect(task.path).toBe('/home/user/project');
     expect(task.description).toBe('A task with everything');
     expect(task.status).toBe('in_progress');

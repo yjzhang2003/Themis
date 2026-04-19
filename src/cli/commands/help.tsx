@@ -43,7 +43,7 @@ export function HelpCommand() {
         <Text bold>Hooks:</Text>
         <Box flexDirection="column" paddingLeft={2}>
           <CommandRow cmd="hook add &lt;name&gt; &lt;type&gt;" desc="Create a hook" />
-          <Text dimColor paddingLeft={2}>  Types: PreToolUse, PostToolUse, Stop</Text>
+          <Box paddingLeft={2}><Text dimColor>  Types: PreToolUse, PostToolUse, Stop</Text></Box>
           <CommandRow cmd="hook list" desc="List all hooks" />
           <CommandRow cmd="hook link &lt;id&gt; [task]" desc="Link hook to task" />
           <CommandRow cmd="hook unlink &lt;id&gt; [task]" desc="Unlink hook from task" />
@@ -60,9 +60,7 @@ export function HelpCommand() {
 function CommandRow({ cmd, desc }: { cmd: string; desc: string }) {
   return (
     <Box>
-      <Text color="cyan" width={28}>
-        {cmd}
-      </Text>
+      <Box width={28}><Text color="cyan">{cmd}</Text></Box>
       <Text>{desc}</Text>
     </Box>
   );

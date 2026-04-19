@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Text } from 'ink';
 import { GlobalLibraryStore } from '../../global-library/index.js';
-import { join } from 'path';
+import { join, basename } from 'path';
+import type { ParsedArgs } from '../context.js';
+
 
 interface GlobalCommandProps {
-  args: Record<string, unknown>;
+  args: ParsedArgs;
 }
 
 export function GlobalCommand({ args }: GlobalCommandProps) {
+
   const [output, setOutput] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const store = new GlobalLibraryStore();
@@ -98,7 +101,8 @@ Global library location: ${store.getGlobalPath()}`);
           return;
         }
         try {
-          const hook = store.installHook(sourcePath);
+          const hookId = basename(sourcePath).replace(/\.[^.]+$/, '');
+          const hook = store.installHook(sourcePath, hookId);
           setOutput(`Installed hook: ${hook.id} [${hook.type}]`);
         } catch (e) {
           setError(`Failed to install hook: ${e instanceof Error ? e.message : e}`);
@@ -197,7 +201,7 @@ Global library location: ${store.getGlobalPath()}`);
 
   return (
     <Box flexDirection="column" padding={1}>
-      <Text white>{output}</Text>
+      <Text>{output}</Text>
     </Box>
   );
 }

@@ -20,17 +20,27 @@ export type TaskHooks = z.infer<typeof TaskHooksSchema>;
 // Task provider type
 const TaskProviderSchema = z.enum(['claude', 'codex']).default('claude');
 
+// OpenSpec binding
+const OpenSpecSchema = z.object({
+  change: z.string().optional(),
+  capability: z.string().optional(),
+  path: z.string().optional(),
+}).optional();
+
 // Simple task entry - stored in tasks.json
 export const TaskSchema = z.object({
   name: z.string().regex(/^[a-zA-Z0-9_-]+$/, 'Task name must match /^[a-zA-Z0-9_-]+$/'),
+  id: z.string().regex(/^[a-zA-Z0-9_-]+$/, 'Task id must match /^[a-zA-Z0-9_-]+$/'),
   path: z.string(),           // Absolute path to task directory
   created_at: z.string(),
+  updated_at: z.string(),
   status: TaskStatusSchema.default('paused'),
   description: z.string().optional(),
   skills: z.array(TaskSkillSchema).default([]),
   hooks: TaskHooksSchema.default({}),
   provider: TaskProviderSchema.default('claude'),
   suite_id: z.string().optional(),  // Which suite was used to create this task
+  openspec: OpenSpecSchema,
 });
 export type Task = z.infer<typeof TaskSchema>;
 
