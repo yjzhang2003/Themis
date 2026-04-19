@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box, Text } from 'ink';
 
 export interface SelectableItem {
@@ -34,10 +34,16 @@ export function ListBox({
 }: ListBoxProps) {
   const [selectedIndex, setSelectedIndex] = useState(initialIndex);
   const [keyHandler, setKeyHandler] = useState<((key: string) => void) | null>(null);
+  const lastItemsLength = useRef(items.length);
 
+  // Only reset selectedIndex when items length changes (e.g., page change)
+  // Don't reset when items is recreated with same length (normal re-render)
   useEffect(() => {
-    setSelectedIndex(initialIndex);
-  }, [items, initialIndex]);
+    if (items.length !== lastItemsLength.current) {
+      setSelectedIndex(initialIndex);
+      lastItemsLength.current = items.length;
+    }
+  }, [items.length, initialIndex]);
 
   // Set up key listener similar to menu.tsx
   useEffect(() => {
