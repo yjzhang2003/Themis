@@ -133,6 +133,7 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
   const [suiteDraftName, setSuiteDraftName] = useState('');
   const [suiteDraftSkills, setSuiteDraftSkills] = useState<string[]>([]);
   const [suiteDraftSkillPage, setSuiteDraftSkillPage] = useState(1);
+  const [isCreatingTaskWithSuite, setIsCreatingTaskWithSuite] = useState(false);
   const suiteStore = new SuiteStore();
   suiteStore.ensureDirectories();
 
@@ -467,11 +468,11 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
               },
             })),
           ]}
-          onBack={() => setView('main')}
+          onBack={() => setView(isCreatingTaskWithSuite ? 'task-create-suite' : 'main')}
         />
 
         <Box marginTop={1} flexDirection="column">
-          <Text dimColor>[Esc] Back to main menu</Text>
+          <Text dimColor>[Esc] {isCreatingTaskWithSuite ? 'Back to task creation' : 'Back to main menu'}</Text>
         </Box>
       </Box>
     );
@@ -654,10 +655,20 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
           items={[
             {
               id: 'apply',
-              label: 'Apply to Task',
-              description: 'Apply this suite to an existing task',
+              label: 'Apply Suite',
+              description: isCreatingTaskWithSuite ? 'Use this suite for the new task' : 'Apply this suite to an existing task',
               onSelect: () => {
-                setView('tasks');
+                if (isCreatingTaskWithSuite && selectedTaskName) {
+                  // Create task with the suite
+                  store.createTask(selectedTaskName, workspaceRoot, undefined, selectedProvider, selectedSuiteId);
+                  refresh();
+                  setSelectedTaskName(null);
+                  setSelectedSuiteId(null);
+                  setIsCreatingTaskWithSuite(false);
+                  setView('tasks');
+                } else {
+                  setView('tasks');
+                }
               },
             },
             {
@@ -672,11 +683,11 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
               },
             },
           ]}
-          onBack={() => setView('suites')}
+          onBack={() => setView(isCreatingTaskWithSuite ? 'task-create-suite' : 'suites')}
         />
 
         <Box marginTop={1} flexDirection="column">
-          <Text dimColor>[Esc] Back to suites</Text>
+          <Text dimColor>[Esc] {isCreatingTaskWithSuite ? 'Back to task creation' : 'Back to suites'}</Text>
         </Box>
       </Box>
     );
@@ -1088,7 +1099,10 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
                     id: 'use-suite',
                     label: 'Use a Suite',
                     description: `Choose from ${suites.length} available suite${suites.length !== 1 ? 's' : ''}`,
-                    onSelect: () => setView('suites'),
+                    onSelect: () => {
+                      setIsCreatingTaskWithSuite(true);
+                      setView('suites');
+                    },
                   },
                 ]
               : []),
@@ -1101,11 +1115,15 @@ export function InteractiveApp({ store, onQuit }: InteractiveAppProps) {
                 refresh();
                 setSelectedTaskName(null);
                 setSelectedSuiteId(null);
+                setIsCreatingTaskWithSuite(false);
                 setView('tasks');
               },
             },
           ]}
-          onBack={() => setView('task-create-provider')}
+          onBack={() => {
+            setIsCreatingTaskWithSuite(false);
+            setView('task-create-provider');
+          }}
         />
 
         <Box marginTop={1}>
